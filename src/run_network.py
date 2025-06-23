@@ -6,41 +6,13 @@ import mnist_loader
 import network
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-import shutil
 from visualization_helpers import (
     visualize_network_structure, 
     run_specific_examples, 
-    find_misclassified_examples
+    find_misclassified_examples,
+    get_user_display_preference,
+    clear_output_directory
 )
-
-def get_user_display_preference():
-    """Ask the user if they want to display visualizations during execution."""
-    while True:
-        response = input("Display visualizations during execution? (y/n): ").strip().lower()
-        if response in ['y', 'n']:
-            return response == 'y'
-        print("Invalid input. Please enter 'y' or 'n'.")
-
-def clear_output_directory(output_dir="output"):
-    """Clear the output directory to start fresh."""
-    if os.path.exists(output_dir):
-        print(f"Clearing existing output directory: {output_dir}")
-        # Remove all files in the directory
-        for file in os.listdir(output_dir):
-            file_path = os.path.join(output_dir, file)
-            try:
-                if os.path.isfile(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print(f"Error removing {file_path}: {e}")
-    else:
-        print(f"Creating output directory: {output_dir}")
-        os.makedirs(output_dir)
-    
-    print(f"Output directory is ready: {output_dir}")
 
 def main():
     # Clear the output directory
