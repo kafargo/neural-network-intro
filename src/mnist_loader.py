@@ -39,9 +39,11 @@ print(load_data_wrapper()[0])
     This is a nice data format, but for use in neural networks it's
     helpful to modify the format of the ``training_data`` a little.
     That's done in the wrapper function ``load_data_wrapper()``, see
-    below.
-    """
-    f = gzip.open('../data/mnist.pkl.gz', 'rb')
+    below.    """
+    import os
+    base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_path = os.path.join(base_path, 'data', 'mnist.pkl.gz')
+    f = gzip.open(data_path, 'rb')
     u = pickle._Unpickler(f)
     u.encoding = 'latin1'
     training_data, validation_data, test_data = u.load()
