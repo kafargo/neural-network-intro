@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Neural Network Client</title>
+    <!-- Socket.IO client library (local copy) -->
+    <script
+      src="socket.io.min.js"
+      onerror="console.error('Failed to load Socket.IO library')"
+      onload="console.log('Socket.IO loaded successfully')"
+    ></script>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -187,6 +193,45 @@
         gap: 10px;
         margin-bottom: 10px;
       }
+
+      .progress-container {
+        width: 100%;
+        background-color: #ddd;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+
+      .progress-bar {
+        height: 24px;
+        background-color: #4caf50;
+        border-radius: 4px;
+        text-align: center;
+        line-height: 24px;
+        color: white;
+        transition: width 0.3s;
+      }
+
+      .training-info {
+        margin-top: 10px;
+        padding: 10px;
+        background-color: #f0f8ff;
+        border-radius: 4px;
+        border: 1px solid #add8e6;
+      }
+
+      .training-metrics {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .metric {
+        padding: 8px;
+        background-color: #f9f9f9;
+        border-radius: 4px;
+        border: 1px solid #eee;
+      }
     </style>
   </head>
   <body>
@@ -269,6 +314,42 @@
             <label for="job-id">Job ID:</label>
             <input type="text" id="job-id" readonly />
           </div>
+
+          <!-- Real-time training progress -->
+          <div id="real-time-progress" class="hidden">
+            <h4>Real-time Training Progress</h4>
+            <div class="progress-container">
+              <div
+                id="training-progress-bar"
+                class="progress-bar"
+                style="width: 0%"
+              >
+                0%
+              </div>
+            </div>
+
+            <div class="training-info">
+              <div id="current-epoch">Waiting for training to start...</div>
+              <div class="training-metrics">
+                <div class="metric">
+                  <strong>Accuracy:</strong>
+                  <span id="current-accuracy">-</span>
+                </div>
+                <div class="metric">
+                  <strong>Correct/Total:</strong>
+                  <span id="current-correct-total">-</span>
+                </div>
+                <div class="metric">
+                  <strong>Elapsed:</strong> <span id="current-elapsed">-</span>
+                </div>
+                <div class="metric">
+                  <strong>Remaining Epochs:</strong>
+                  <span id="remaining-epochs">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <button id="check-status-btn">Check Status</button>
           <div id="status-result" class="results"></div>
         </div>
@@ -355,6 +436,10 @@
     </div>
 
     <script>
+      // Initialize Socket.IO connection
+      let socket;
+      let currentTrainingJob = null;
+
       // Constants
       // Determine the API URL based on the hosting environment
       const getApiBaseUrl = () => {
@@ -559,6 +644,112 @@
         }
       }
 
+      // Initialize Socket.IO
+      function initializeSocket() {
+        console.log("DEBUG: initializeSocket called");
+
+        // Check if io is available
+        if (typeof io === "undefined") {
+          console.error(
+            "DEBUG: Socket.IO library not loaded! 'io' is undefined"
+          );
+          return;
+        }
+
+        console.log("DEBUG: Socket.IO library is available");
+
+        // Only initialize once
+        if (!socket) {
+          console.log("DEBUG: Creating new socket connection");
+          try {
+            // Connect to the server
+            socket = io();
+            console.log("DEBUG: Socket object created:", socket);
+
+            // Listen for training updates
+            socket.on("training_update", function (data) {
+              console.log("DEBUG: Training update received:", data);
+              updateTrainingProgress(data);
+            });
+
+            // Handle connection events
+            socket.on("connect", function () {
+              console.log("DEBUG: WebSocket connected, socket ID:", socket.id);
+            });
+
+            socket.on("disconnect", function () {
+              console.log("DEBUG: WebSocket disconnected");
+            });
+
+            socket.on("connect_error", function (error) {
+              console.error("DEBUG: WebSocket connection error:", error);
+            });
+          } catch (error) {
+            console.error("DEBUG: Error creating socket:", error);
+          }
+        } else {
+          console.log("DEBUG: Socket already initialized");
+        }
+      }
+
+      // Update the training progress UI
+      function updateTrainingProgress(data) {
+        console.log("DEBUG: updateTrainingProgress called with:", data);
+
+        // Show the real-time progress section
+        const progressSection = document.getElementById("real-time-progress");
+        console.log("DEBUG: Progress section element:", progressSection);
+
+        if (progressSection) {
+          progressSection.classList.remove("hidden");
+          console.log("DEBUG: Progress section shown");
+        } else {
+          console.error("DEBUG: Could not find real-time-progress element");
+        }
+
+        // Update progress bar
+        const progressBar = document.getElementById("training-progress-bar");
+        console.log("DEBUG: Progress bar element:", progressBar);
+
+        if (progressBar) {
+          const progressValue = Math.round(data.progress);
+          progressBar.style.width = `${progressValue}%`;
+          progressBar.textContent = `${progressValue}%`;
+          console.log("DEBUG: Progress bar updated to:", progressValue + "%");
+        } else {
+          console.error("DEBUG: Could not find training-progress-bar element");
+        }
+
+        // Update current epoch info
+        document.getElementById(
+          "current-epoch"
+        ).textContent = `Epoch ${data.epoch} of ${data.total_epochs}`;
+
+        // Update accuracy
+        if (data.accuracy !== null) {
+          const accuracyPercent = (data.accuracy * 100).toFixed(2);
+          document.getElementById(
+            "current-accuracy"
+          ).textContent = `${accuracyPercent}%`;
+        }
+
+        // Update correct/total
+        if (data.correct !== undefined && data.total !== undefined) {
+          document.getElementById(
+            "current-correct-total"
+          ).textContent = `${data.correct} / ${data.total}`;
+        }
+
+        // Update elapsed time
+        document.getElementById(
+          "current-elapsed"
+        ).textContent = `${data.elapsed_time.toFixed(2)}s`;
+
+        // Update remaining epochs
+        const remaining = data.total_epochs - data.epoch;
+        document.getElementById("remaining-epochs").textContent = remaining;
+      }
+
       // Train Network
       async function trainNetwork() {
         const networkId = document.getElementById("network-id-train").value;
@@ -576,6 +767,9 @@
         }
 
         showLoading("train-result");
+
+        // Initialize the WebSocket connection if not already done
+        initializeSocket();
 
         try {
           const response = await fetch(
@@ -599,9 +793,21 @@
             `Training started with job ID: ${data.job_id}`
           );
 
+          // Store current training job
+          currentTrainingJob = data.job_id;
+
           // Update the training status section
           document.getElementById("training-status").classList.remove("hidden");
           document.getElementById("job-id").value = data.job_id;
+
+          // Reset and show the real-time progress UI
+          document
+            .getElementById("real-time-progress")
+            .classList.remove("hidden");
+          document.getElementById("training-progress-bar").style.width = "0%";
+          document.getElementById("training-progress-bar").textContent = "0%";
+          document.getElementById("current-epoch").textContent =
+            "Waiting for first epoch to complete...";
         } catch (error) {
           showError("train-result", `Error: ${error.message}`);
           console.error("Train Network Error:", error);
@@ -1140,6 +1346,12 @@
       // Initialize
       checkApiStatus();
       loadNetworkList();
+
+      // Initialize Socket.IO with a small delay to ensure everything is loaded
+      setTimeout(function () {
+        console.log("DEBUG: About to initialize Socket.IO");
+        initializeSocket();
+      }, 100);
 
       // Refresh API status periodically
       setInterval(checkApiStatus, 10000);

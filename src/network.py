@@ -44,7 +44,7 @@ class Network(object):
         return a
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
-            test_data=None):
+            test_data=None, callback=None):
         """Train the neural network using mini-batch stochastic
         gradient descent.  The ``training_data`` is a list of tuples
         ``(x, y)`` representing the training inputs and the desired
@@ -52,7 +52,9 @@ class Network(object):
         self-explanatory.  If ``test_data`` is provided then the
         network will be evaluated against the test data after each
         epoch, and partial progress printed out.  This is useful for
-        tracking progress, but slows things down substantially."""
+        tracking progress, but slows things down substantially.
+        If ``callback`` is provided, it will be called after each epoch with
+        epoch information for real-time updates."""
         if test_data: n_test = len(test_data)
         n = len(training_data)
         for j in range(epochs):
@@ -64,11 +66,30 @@ class Network(object):
             for mini_batch in mini_batches:
                 self.update_mini_batch(mini_batch, eta)
             time2 = time.time()
+            
+            # Calculate accuracy and elapsed time
+            elapsed = time2 - time1
+            accuracy = None
             if test_data:
+                correct = self.evaluate(test_data)
+                accuracy = correct / n_test
                 print("Epoch {0}: {1} / {2}, took {3:.2f} seconds".format(
-                    j, self.evaluate(test_data), n_test, time2-time1))
+                    j, correct, n_test, elapsed))
             else:
-                print("Epoch {0} complete in {1:.2f} seconds".format(j, time2-time1))
+                print("Epoch {0} complete in {1:.2f} seconds".format(j, elapsed))
+            
+            # Call the callback function with epoch results
+            if callback:
+                callback_data = {
+                    'epoch': j + 1,
+                    'total_epochs': epochs,
+                    'elapsed_time': elapsed,
+                    'accuracy': accuracy
+                }
+                if test_data:
+                    callback_data['correct'] = int(self.evaluate(test_data))
+                    callback_data['total'] = n_test
+                callback(callback_data)
 
     def update_mini_batch(self, mini_batch, eta):
         """Update the network's weights and biases by applying

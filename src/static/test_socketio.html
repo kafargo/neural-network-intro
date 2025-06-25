@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.IO Test</title>
+    <script src="socket.io.min.js"></script>
+  </head>
+  <body>
+    <h1>Socket.IO Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="messages"></div>
+
+    <script>
+      console.log("Starting Socket.IO test");
+
+      // Check if io is available
+      if (typeof io === "undefined") {
+        document.getElementById("status").innerHTML =
+          "ERROR: Socket.IO library not loaded!";
+        console.error("Socket.IO library not loaded!");
+      } else {
+        console.log("Socket.IO library is available");
+
+        // Create socket connection
+        const socket = io();
+
+        socket.on("connect", function () {
+          console.log("Connected to server! Socket ID:", socket.id);
+          document.getElementById("status").innerHTML =
+            "Connected! Socket ID: " + socket.id;
+        });
+
+        socket.on("disconnect", function () {
+          console.log("Disconnected from server");
+          document.getElementById("status").innerHTML = "Disconnected";
+        });
+
+        socket.on("connect_error", function (error) {
+          console.error("Connection error:", error);
+          document.getElementById("status").innerHTML =
+            "Connection error: " + error;
+        });
+
+        socket.on("training_update", function (data) {
+          console.log("Training update received:", data);
+          const messagesDiv = document.getElementById("messages");
+          messagesDiv.innerHTML +=
+            "<div>Training update: Epoch " +
+            data.epoch +
+            " of " +
+            data.total_epochs +
+            " (Progress: " +
+            Math.round(data.progress) +
+            "%)</div>";
+        });
+      }
+    </script>
+  </body>
+</html>
