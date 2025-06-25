@@ -57,7 +57,7 @@ except ImportError:
 
 # Initialize Flask app
 app = Flask(__name__, static_folder='static')
-CORS(app)  # Enable CORS for all routes
+CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for all routes and all origins
 
 # Store active networks in memory
 active_networks = {}
