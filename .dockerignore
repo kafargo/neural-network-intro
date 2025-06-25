@@ -1,0 +1,25 @@
+# Exclude virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Exclude git files
+.git/
+.gitignore
+
+# Exclude editor specific files
+.vscode/
+.idea/
+
+# Exclude any saved models (these will be created in the container)
+models/*
+
+# Keep output directory but exclude its contents
+output/*
+!output/.gitkeep
+
+src/output/*
+!src/output/.gitkeep

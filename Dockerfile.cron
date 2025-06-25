@@ -1,0 +1,24 @@
+FROM python:3.9-slim
+
+# Install cron
+RUN apt-get update && apt-get -y install cron
+
+# Set working directory
+WORKDIR /app
+
+# Copy the cleanup script
+COPY cleanup_models.sh /app/cleanup_models.sh
+RUN chmod +x /app/cleanup_models.sh
+
+# Add crontab file
+RUN echo "0 0 * * * /app/cleanup_models.sh >> /app/cleanup.log 2>&1" > /etc/cron.d/cleanup-cron
+RUN chmod 0644 /etc/cron.d/cleanup-cron
+
+# Apply cron job
+RUN crontab /etc/cron.d/cleanup-cron
+
+# Create log file
+RUN touch /app/cleanup.log
+
+# Run cron in the foreground
+CMD ["cron", "-f"]

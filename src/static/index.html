@@ -356,8 +356,18 @@
 
     <script>
       // Constants
-      // Use the current hostname instead of hardcoding "localhost"
-      const API_BASE_URL = `http://${window.location.hostname}:8000/api`;
+      // Determine the API URL based on the hosting environment
+      const getApiBaseUrl = () => {
+        // Check if we're on Railway.com
+        if (window.location.hostname.includes("railway.com")) {
+          // When hosted on Railway, the API is typically on the same origin
+          return `/api`;
+        } else {
+          // For local development or other environments, use the default port 8000
+          return `http://${window.location.hostname}:8000/api`;
+        }
+      };
+      const API_BASE_URL = getApiBaseUrl();
 
       // State
       let selectedNetworkId = null;
