@@ -3,6 +3,9 @@ Helper functions for visualizing neural network predictions and structure.
 These functions can be used to display MNIST digits and network architecture.
 """
 import numpy as np
+# Set matplotlib to use non-interactive backend before importing pyplot
+import matplotlib
+matplotlib.use('Agg')  # Use the Agg backend which doesn't require a display
 import matplotlib.pyplot as plt
 import random
 import os
@@ -34,14 +37,13 @@ def display_digit(image_data, index, predicted=None, actual=None, save_dir="outp
     filename = f"{save_dir}/digit_{index}_pred_{predicted}_actual_{actual}.png"
     plt.savefig(filename)
     
+    # In a web server environment, we don't want to display windows
+    # Always close the figure to free memory and prevent GUI issues
+    plt.close()  
+    
     if display:
-        # Also display the image in a window
-        # Use non-blocking mode so the script continues running
-        plt.show(block=False)
-        plt.pause(1)  # Pause to ensure the window displays
-        print(f"Image saved to {filename} and displayed")
+        print(f"Image saved to {filename}")
     else:
-        plt.close()  # Close the figure to free memory
         print(f"Image saved to {filename}")
 
 def run_specific_examples(net, test_data, num_examples=5, specific_indices=None, display=True):
@@ -233,13 +235,13 @@ def visualize_network_structure(net, save_dir="output", display=True):
     filename = f"{save_dir}/network_structure.png"
     plt.savefig(filename, dpi=300, bbox_inches='tight')
     
+    # In a web server environment, we don't want to display windows
+    # Always close the figure to free memory and prevent GUI issues
+    plt.close()
+    
     if display:
-        # Display in non-blocking mode so script continues running
-        plt.show(block=False)
-        plt.pause(1)  # Pause briefly to ensure the window displays
-        print(f"Network structure visualization saved to {filename} and displayed")
+        print(f"Network structure visualization saved to {filename}")
     else:
-        plt.close()  # Close the figure to free memory
         print(f"Network structure visualization saved to {filename}")
 
 def find_misclassified_examples(net, test_data, max_count=3, max_check=200):
