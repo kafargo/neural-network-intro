@@ -25,21 +25,23 @@ Currently, no client-to-server events are required. The connection is primarily 
 Emitted after each training epoch completes.
 
 **Event Data Structure:**
+
 ```typescript
 interface TrainingUpdate {
-  job_id: string;           // Unique identifier for the training job
-  network_id: string;       // Unique identifier for the neural network
-  epoch: number;            // Current epoch number (1-based)
-  total_epochs: number;     // Total number of epochs for this training session
-  accuracy: number | null;  // Current accuracy (0.0 to 1.0), null if no test data
-  elapsed_time: number;     // Time taken for this epoch in seconds
-  progress: number;         // Training progress percentage (0-100)
-  correct?: number;         // Number of correct predictions (if test data available)
-  total?: number;          // Total number of test samples (if test data available)
+  job_id: string; // Unique identifier for the training job
+  network_id: string; // Unique identifier for the neural network
+  epoch: number; // Current epoch number (1-based)
+  total_epochs: number; // Total number of epochs for this training session
+  accuracy: number | null; // Current accuracy (0.0 to 1.0), null if no test data
+  elapsed_time: number; // Time taken for this epoch in seconds
+  progress: number; // Training progress percentage (0-100)
+  correct?: number; // Number of correct predictions (if test data available)
+  total?: number; // Total number of test samples (if test data available)
 }
 ```
 
 **Example Event Data:**
+
 ```json
 {
   "job_id": "a82c53d7-e99d-470d-ae1e-8575e42e1926",
@@ -69,9 +71,9 @@ Create a service to handle WebSocket connections:
 
 ```typescript
 // training-websocket.service.ts
-import { Injectable } from '@angular/core';
-import { io, Socket } from 'socket.io-client';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Injectable } from "@angular/core";
+import { io, Socket } from "socket.io-client";
+import { Observable, BehaviorSubject } from "rxjs";
 
 export interface TrainingUpdate {
   job_id: string;
@@ -91,11 +93,13 @@ export interface ConnectionStatus {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: "root",
 })
 export class TrainingWebSocketService {
   private socket: Socket;
-  private connectionStatus = new BehaviorSubject<ConnectionStatus>({ connected: false });
+  private connectionStatus = new BehaviorSubject<ConnectionStatus>({
+    connected: false,
+  });
   private trainingUpdates = new BehaviorSubject<TrainingUpdate | null>(null);
 
   constructor() {
@@ -104,38 +108,38 @@ export class TrainingWebSocketService {
 
   private initializeConnection(): void {
     // Replace with your server URL
-    const serverUrl = 'http://localhost:8000';
-    
+    const serverUrl = "http://localhost:8000";
+
     this.socket = io(serverUrl, {
-      transports: ['websocket', 'polling'], // Fallback to polling if WebSocket fails
+      transports: ["websocket", "polling"], // Fallback to polling if WebSocket fails
       timeout: 20000,
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
     });
 
     // Connection event handlers
-    this.socket.on('connect', () => {
-      console.log('Connected to training WebSocket:', this.socket.id);
-      this.connectionStatus.next({ 
-        connected: true, 
-        socketId: this.socket.id 
+    this.socket.on("connect", () => {
+      console.log("Connected to training WebSocket:", this.socket.id);
+      this.connectionStatus.next({
+        connected: true,
+        socketId: this.socket.id,
       });
     });
 
-    this.socket.on('disconnect', (reason) => {
-      console.log('Disconnected from training WebSocket:', reason);
+    this.socket.on("disconnect", (reason) => {
+      console.log("Disconnected from training WebSocket:", reason);
       this.connectionStatus.next({ connected: false });
     });
 
-    this.socket.on('connect_error', (error) => {
-      console.error('WebSocket connection error:', error);
+    this.socket.on("connect_error", (error) => {
+      console.error("WebSocket connection error:", error);
       this.connectionStatus.next({ connected: false });
     });
 
     // Training update handler
-    this.socket.on('training_update', (data: TrainingUpdate) => {
-      console.log('Training update received:', data);
+    this.socket.on("training_update", (data: TrainingUpdate) => {
+      console.log("Training update received:", data);
       this.trainingUpdates.next(data);
     });
   }
@@ -182,18 +186,25 @@ Use the service in your components:
 
 ```typescript
 // training-progress.component.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
-import { Subscription } from 'rxjs';
-import { TrainingWebSocketService, TrainingUpdate, ConnectionStatus } from './training-websocket.service';
+import { Component, OnInit, OnDestroy } from "@angular/core";
+import { Subscription } from "rxjs";
+import {
+  TrainingWebSocketService,
+  TrainingUpdate,
+  ConnectionStatus,
+} from "./training-websocket.service";
 
 @Component({
-  selector: 'app-training-progress',
+  selector: "app-training-progress",
   template: `
     <div class="training-progress-container">
       <!-- Connection Status -->
-      <div class="connection-status" [class.connected]="connectionStatus.connected">
+      <div
+        class="connection-status"
+        [class.connected]="connectionStatus.connected"
+      >
         <span *ngIf="connectionStatus.connected; else disconnected">
-          🟢 Connected (ID: {{connectionStatus.socketId}})
+          🟢 Connected (ID: {{ connectionStatus.socketId }})
         </span>
         <ng-template #disconnected>
           🔴 Disconnected
@@ -204,11 +215,11 @@ import { TrainingWebSocketService, TrainingUpdate, ConnectionStatus } from './tr
       <!-- Training Progress -->
       <div *ngIf="currentTraining" class="training-info">
         <h3>Training Progress</h3>
-        
+
         <!-- Progress Bar -->
         <div class="progress-bar-container">
           <div class="progress-bar" [style.width.%]="currentTraining.progress">
-            {{currentTraining.progress.toFixed(1)}}%
+            {{ currentTraining.progress.toFixed(1) }}%
           </div>
         </div>
 
@@ -216,127 +227,149 @@ import { TrainingWebSocketService, TrainingUpdate, ConnectionStatus } from './tr
         <div class="training-details">
           <div class="detail-row">
             <span class="label">Epoch:</span>
-            <span class="value">{{currentTraining.epoch}} / {{currentTraining.total_epochs}}</span>
+            <span class="value"
+              >{{ currentTraining.epoch }} /
+              {{ currentTraining.total_epochs }}</span
+            >
           </div>
-          
+
           <div class="detail-row" *ngIf="currentTraining.accuracy !== null">
             <span class="label">Accuracy:</span>
-            <span class="value">{{(currentTraining.accuracy * 100).toFixed(2)}}%</span>
+            <span class="value"
+              >{{ (currentTraining.accuracy * 100).toFixed(2) }}%</span
+            >
           </div>
-          
+
           <div class="detail-row">
             <span class="label">Elapsed Time:</span>
-            <span class="value">{{currentTraining.elapsed_time.toFixed(2)}}s</span>
+            <span class="value"
+              >{{ currentTraining.elapsed_time.toFixed(2) }}s</span
+            >
           </div>
-          
-          <div class="detail-row" *ngIf="currentTraining.correct && currentTraining.total">
+
+          <div
+            class="detail-row"
+            *ngIf="currentTraining.correct && currentTraining.total"
+          >
             <span class="label">Correct/Total:</span>
-            <span class="value">{{currentTraining.correct}} / {{currentTraining.total}}</span>
+            <span class="value"
+              >{{ currentTraining.correct }} / {{ currentTraining.total }}</span
+            >
           </div>
-          
+
           <div class="detail-row">
             <span class="label">Remaining Epochs:</span>
-            <span class="value">{{currentTraining.total_epochs - currentTraining.epoch}}</span>
+            <span class="value">{{
+              currentTraining.total_epochs - currentTraining.epoch
+            }}</span>
           </div>
         </div>
 
         <!-- Network & Job IDs -->
         <div class="metadata">
           <small>
-            <div>Job ID: {{currentTraining.job_id}}</div>
-            <div>Network ID: {{currentTraining.network_id}}</div>
+            <div>Job ID: {{ currentTraining.job_id }}</div>
+            <div>Network ID: {{ currentTraining.network_id }}</div>
           </small>
         </div>
       </div>
 
       <!-- No Training Active -->
-      <div *ngIf="!currentTraining && connectionStatus.connected" class="no-training">
-        <p>No active training session. Start training a network to see real-time updates.</p>
+      <div
+        *ngIf="!currentTraining && connectionStatus.connected"
+        class="no-training"
+      >
+        <p>
+          No active training session. Start training a network to see real-time
+          updates.
+        </p>
       </div>
     </div>
   `,
-  styles: [`
-    .training-progress-container {
-      padding: 20px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
+  styles: [
+    `
+      .training-progress-container {
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        margin: 20px 0;
+      }
 
-    .connection-status {
-      padding: 10px;
-      border-radius: 4px;
-      margin-bottom: 20px;
-      background-color: #ffebee;
-    }
+      .connection-status {
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        background-color: #ffebee;
+      }
 
-    .connection-status.connected {
-      background-color: #e8f5e8;
-    }
+      .connection-status.connected {
+        background-color: #e8f5e8;
+      }
 
-    .btn-reconnect {
-      margin-left: 10px;
-      padding: 4px 8px;
-      background-color: #2196f3;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
+      .btn-reconnect {
+        margin-left: 10px;
+        padding: 4px 8px;
+        background-color: #2196f3;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
 
-    .progress-bar-container {
-      width: 100%;
-      height: 30px;
-      background-color: #f0f0f0;
-      border-radius: 15px;
-      overflow: hidden;
-      margin-bottom: 20px;
-    }
+      .progress-bar-container {
+        width: 100%;
+        height: 30px;
+        background-color: #f0f0f0;
+        border-radius: 15px;
+        overflow: hidden;
+        margin-bottom: 20px;
+      }
 
-    .progress-bar {
-      height: 100%;
-      background-color: #4caf50;
-      transition: width 0.5s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: bold;
-    }
+      .progress-bar {
+        height: 100%;
+        background-color: #4caf50;
+        transition: width 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+      }
 
-    .training-details {
-      margin-bottom: 20px;
-    }
+      .training-details {
+        margin-bottom: 20px;
+      }
 
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 5px 0;
-      border-bottom: 1px solid #eee;
-    }
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #eee;
+      }
 
-    .label {
-      font-weight: bold;
-    }
+      .label {
+        font-weight: bold;
+      }
 
-    .metadata {
-      color: #666;
-      font-size: 12px;
-      border-top: 1px solid #eee;
-      padding-top: 10px;
-    }
+      .metadata {
+        color: #666;
+        font-size: 12px;
+        border-top: 1px solid #eee;
+        padding-top: 10px;
+      }
 
-    .no-training {
-      text-align: center;
-      color: #666;
-      font-style: italic;
-    }
-  `]
+      .no-training {
+        text-align: center;
+        color: #666;
+        font-style: italic;
+      }
+    `,
+  ],
 })
 export class TrainingProgressComponent implements OnInit, OnDestroy {
   connectionStatus: ConnectionStatus = { connected: false };
   currentTraining: TrainingUpdate | null = null;
-  
+
   private subscriptions: Subscription[] = [];
 
   constructor(private trainingWebSocket: TrainingWebSocketService) {}
@@ -344,21 +377,21 @@ export class TrainingProgressComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Subscribe to connection status
     this.subscriptions.push(
-      this.trainingWebSocket.getConnectionStatus().subscribe(
-        status => this.connectionStatus = status
-      )
+      this.trainingWebSocket
+        .getConnectionStatus()
+        .subscribe((status) => (this.connectionStatus = status))
     );
 
     // Subscribe to training updates
     this.subscriptions.push(
-      this.trainingWebSocket.getTrainingUpdates().subscribe(
-        update => this.currentTraining = update
-      )
+      this.trainingWebSocket
+        .getTrainingUpdates()
+        .subscribe((update) => (this.currentTraining = update))
     );
   }
 
   ngOnDestroy(): void {
-    this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.subscriptions.forEach((sub) => sub.unsubscribe());
   }
 
   reconnect(): void {
@@ -373,24 +406,18 @@ Add the service to your module:
 
 ```typescript
 // app.module.ts
-import { NgModule } from '@angular/core';
-import { BrowserModule } from '@angular/platform-browser';
-import { TrainingWebSocketService } from './training-websocket.service';
-import { TrainingProgressComponent } from './training-progress.component';
+import { NgModule } from "@angular/core";
+import { BrowserModule } from "@angular/platform-browser";
+import { TrainingWebSocketService } from "./training-websocket.service";
+import { TrainingProgressComponent } from "./training-progress.component";
 
 @NgModule({
-  declarations: [
-    TrainingProgressComponent
-  ],
-  imports: [
-    BrowserModule
-  ],
-  providers: [
-    TrainingWebSocketService
-  ],
-  bootstrap: [AppComponent]
+  declarations: [TrainingProgressComponent],
+  imports: [BrowserModule],
+  providers: [TrainingWebSocketService],
+  bootstrap: [AppComponent],
 })
-export class AppModule { }
+export class AppModule {}
 ```
 
 ## Usage Workflow
@@ -421,6 +448,7 @@ startTraining(networkId: string, epochs: number = 10): Observable<any> {
 ## Error Handling
 
 The service includes built-in error handling for:
+
 - Connection failures
 - Reconnection attempts
 - Network interruptions
@@ -456,3 +484,72 @@ This will help verify that the WebSocket server is working correctly before inte
 - Check browser network tab for WebSocket connections
 - Monitor server logs for emitted events
 - Use the test HTML page to verify server-side functionality
+
+## Production Deployment
+
+### Environment Configuration
+
+When deploying to production environments (Docker containers, cloud platforms like Railway, Heroku, etc.), ensure proper configuration:
+
+1. **File Permissions**: The server should not attempt to write debug logs to hardcoded local paths
+2. **Environment Variables**: Use environment variables for configuration
+3. **Error Handling**: Implement proper error handling for file system operations
+
+### Common Production Issues
+
+#### File System Access Errors
+
+**Error:** `FileNotFoundError: [Errno 2] No such file or directory: '/Users/alexfargo/debug_training.log'`
+
+**Cause:** The application is trying to write debug logs to a hardcoded local file path that doesn't exist in the production container.
+
+**Solution:** Remove debug logging code or use proper logging configuration:
+
+```python
+import logging
+import os
+
+# Configure logging based on environment
+if os.environ.get('FLASK_ENV') == 'production':
+    logging.basicConfig(level=logging.INFO)
+else:
+    logging.basicConfig(level=logging.DEBUG)
+
+# Use logging instead of file writes
+logging.info(f"Training started for network {network_id}")
+```
+
+#### Container Considerations
+
+For containerized deployments:
+
+- Use stdout/stderr for logging (captured by container orchestration)
+- Avoid writing to local filesystem unless using mounted volumes
+- Use environment variables for configuration
+- Ensure proper signal handling for graceful shutdowns
+
+### Production-Ready Configuration
+
+```python
+# Example production configuration
+import os
+from flask import Flask
+from flask_socketio import SocketIO
+
+app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Production settings
+is_production = os.environ.get('FLASK_ENV') == 'production'
+port = int(os.environ.get('PORT', 8000))
+
+if __name__ == '__main__':
+    socketio.run(
+        app,
+        host='0.0.0.0',
+        port=port,
+        debug=not is_production,
+        use_reloader=False,
+        allow_unsafe_werkzeug=True
+    )
+```

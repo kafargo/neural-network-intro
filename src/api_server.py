@@ -82,8 +82,7 @@ def get_status():
     return jsonify({
         'status': 'online',
         'active_networks': len(active_networks),
-        'training_jobs': len(training_jobs),
-        'debug': 'version_2024_12_25'
+        'training_jobs': len(training_jobs)
     })
 
 @app.route('/api/networks', methods=['POST'])
@@ -117,9 +116,6 @@ def create_network():
 @app.route('/api/networks/<network_id>/train', methods=['POST'])
 def train_network(network_id):
     """Start asynchronous training for the specified network"""
-    with open('/Users/alexfargo/debug_training.log', 'a') as f:
-        f.write(f"DEBUG: train_network endpoint called for {network_id}\n")
-        f.flush()
     if network_id not in active_networks:
         return jsonify({'error': 'Network not found'}), 404
         
@@ -140,17 +136,11 @@ def train_network(network_id):
     }
     
     # Start training in a separate thread
-    with open('/Users/alexfargo/debug_training.log', 'a') as f:
-        f.write(f"DEBUG: Creating thread for training network {network_id}\n")
-        f.flush()
     thread = threading.Thread(
         target=train_network_task,
         args=(network_id, job_id, epochs, mini_batch_size, learning_rate)
     )
     thread.start()
-    with open('/Users/alexfargo/debug_training.log', 'a') as f:
-        f.write(f"DEBUG: Thread started for training\n")
-        f.flush()
     
     return jsonify({
         'job_id': job_id,
@@ -160,22 +150,15 @@ def train_network(network_id):
 
 def train_network_task(network_id, job_id, epochs, mini_batch_size, learning_rate):
     """Background task to train the network"""
-    with open('/Users/alexfargo/debug_training.log', 'a') as f:
-        f.write(f"DEBUG: train_network_task started for network {network_id}, job {job_id}\n")
-        f.flush()
     net = active_networks[network_id]['network']
     
     def epoch_callback(data):
         """Callback function for each epoch to send updates via websocket"""
-        with open('/Users/alexfargo/debug_training.log', 'a') as f:
-            f.write(f"DEBUG: Epoch callback called with data: {data}\n")
-            f.flush()
-        
         # Update the job status
         training_jobs[job_id]['status'] = 'training'
         training_jobs[job_id]['progress'] = (data['epoch'] / data['total_epochs']) * 100
         
-        # Debug: Print what we're about to emit
+        # Prepare update data for websocket emission
         update_data = {
             'job_id': job_id,
             'network_id': network_id,
@@ -187,23 +170,14 @@ def train_network_task(network_id, job_id, epochs, mini_batch_size, learning_rat
             'correct': data.get('correct'),
             'total': data.get('total')
         }
-        with open('/Users/alexfargo/debug_training.log', 'a') as f:
-            f.write(f"DEBUG: Emitting training_update with data: {update_data}\n")
-            f.flush()
         
         # Emit the progress update through websocket
         socketio.emit('training_update', update_data)
     
     try:
         # Train the network with the callback function
-        with open('/Users/alexfargo/debug_training.log', 'a') as f:
-            f.write(f"DEBUG: Starting SGD training with callback\n")
-            f.flush()
         net.SGD(training_data, epochs, mini_batch_size, learning_rate, 
                 test_data=test_data, callback=epoch_callback)
-        with open('/Users/alexfargo/debug_training.log', 'a') as f:
-            f.write(f"DEBUG: SGD training completed\n")
-            f.flush()
         
         # Calculate accuracy
         accuracy = net.evaluate(test_data) / len(test_data)
