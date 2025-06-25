@@ -358,13 +358,16 @@
       // Constants
       // Determine the API URL based on the hosting environment
       const getApiBaseUrl = () => {
-        // Check if we're on Railway.com
-        if (window.location.hostname.includes("railway.com")) {
-          // When hosted on Railway, the API is typically on the same origin
+        // Check for any cloud hosting like Railway.app or Railway.com
+        if (window.location.hostname.includes("railway")) {
+          // When hosted on Railway, the API is on the same origin
           return `/api`;
+        } else if (window.location.protocol === "https:") {
+          // For HTTPS sites, we must use HTTPS for API to avoid mixed content
+          return `https://${window.location.hostname}:8000/api`;
         } else {
-          // For local development or other environments, use the default port 8000
-          return `http://${window.location.hostname}:8000/api`;
+          // For local development, use protocol-relative URL (adapts to HTTP/HTTPS)
+          return `//${window.location.hostname}:8000/api`;
         }
       };
       const API_BASE_URL = getApiBaseUrl();

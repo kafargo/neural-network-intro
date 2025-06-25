@@ -586,8 +586,18 @@ if __name__ == '__main__':
     if not os.path.exists(static_dir):
         os.makedirs(static_dir)
     
+    # Check if we're running in a cloud environment like Railway
+    is_production = os.environ.get('RAILWAY_STATIC_URL', False) or os.environ.get('PORT', False)
+    
+    # Get port from environment variable or use default
+    port = int(os.environ.get('PORT', 8000))
+    
     # Tell the user where the server is running
-    print(f"Server running at http://localhost:8000/")
+    if is_production:
+        print(f"Server running in production mode on port {port}")
+    else:
+        print(f"Server running at http://localhost:{port}/")
     
     # Set host to '0.0.0.0' to make it accessible from other machines
-    app.run(host='0.0.0.0', debug=True, port=8000)
+    # Disable debug mode in production for security
+    app.run(host='0.0.0.0', debug=not is_production, port=port)
