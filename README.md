@@ -1,47 +1,157 @@
-## This fork is made to work with the latest python versions (3.8.x to 3.10.x)
+# Neural Network Backend System
 
-This is a fork of [Michael Nielsen](https://github.com/mnielsen/neural-networks-and-deep-learning) repository and is meant to be updated with the latest python and dependency versions. Most things have been updated and currently work. Any help is appreciated and if you spotted any problems, please open an issue and/or a PR.
+This project is a backend system for creating, training, and using neural networks. The system allows a frontend application to:
 
-# Code samples for "Neural Networks and Deep Learning"
+1. Create a neural network with a customizable architecture
+2. Train the network with a specified number of epochs and parameters
+3. Test the network on MNIST data
+4. Visualize the network structure and results
 
-This repository contains code samples for my book on ["Neural Networks
-and Deep Learning"](http://neuralnetworksanddeeplearning.com).
+## Architecture
 
-The code is written for Python 2.6 or 2.7. Michal Daniel Dobrzanski
-has a repository for Python 3
-[here](https://github.com/MichalDanielDobrzanski/DeepLearningPython35). I
-will not be updating the current repository for Python 3
-compatibility.
+The system consists of:
 
-The program `src/network3.py` uses version 0.6 or 0.7 of the Theano
-library.  It needs modification for compatibility with later versions
-of the library.  I will not be making such modifications.
+- **Flask API Server**: Handles requests from frontend applications
+- **Neural Network Module**: Implements the neural network functionality
+- **Model Persistence**: Allows saving and loading trained networks
+- **Web Interface**: Simple frontend for interacting with the API
 
-As the code is written to accompany the book, I don't intend to add
-new features. However, bug reports are welcome, and you should feel
-free to fork and modify the code.
+## Getting Started
+
+### Accessing the Server
+
+The server is configured to run on all network interfaces (`0.0.0.0`), which means you can access it:
+
+- From the same machine using: `http://localhost:8000/`
+- From other devices on the same network using: `http://<your-machine-ip>:8000/`
+
+You can run `./access_info.sh` to see all available ways to access your server.
+
+> **Note**: If you're having trouble accessing the server from another device, check your firewall settings to ensure port 8000 is allowed.
+
+> **Note for macOS users**: We're using port 8000 instead of 5000 because port 5000 is commonly used by AirPlay Receiver on macOS.
+
+### Prerequisites
+
+- Python 3.6 or higher
+- pip (Python package installer)
+
+### Installation
+
+1. Clone this repository:
+
+```
+git clone https://github.com/yourusername/neural-network-backend.git
+cd neural-network-backend
+```
+
+2. Run the server script:
+
+```
+./run_server.sh
+```
+
+This will:
+
+- Create a virtual environment (if it doesn't exist)
+- Install required packages
+- Start the API server on port 5000
+
+### Usage
+
+Once the server is running, you can:
+
+1. Access the web interface at http://localhost:5000/
+2. Use the API directly for custom frontend development
+
+## API Endpoints
+
+The following API endpoints are available:
+
+### Network Management
+
+- `GET /api/status`: Get server status
+- `POST /api/networks`: Create a new neural network
+- `GET /api/networks`: List all available networks
+- `DELETE /api/networks/{network_id}`: Delete a network
+- `POST /api/networks/{network_id}/load`: Load a saved network into memory
+
+### Training
+
+- `POST /api/networks/{network_id}/train`: Start training a network
+- `GET /api/training/{job_id}`: Check training status
+
+### Testing and Visualization
+
+- `POST /api/networks/{network_id}/predict`: Run prediction on a single example
+- `POST /api/networks/{network_id}/predict_batch`: Run predictions on multiple examples
+- `GET /api/networks/{network_id}/misclassified`: Find misclassified examples
+- `GET /api/networks/{network_id}/visualize`: Get network visualization
+- `GET /api/networks/{network_id}/stats`: Get network statistics
+- `GET /api/networks/{network_id}/successful_example`: Get a random successful prediction with visualization and output weights
+- `GET /api/networks/{network_id}/unsuccessful_example`: Get a random unsuccessful prediction with visualization and output weights
+
+## Troubleshooting
+
+### Connection Issues
+
+If you're experiencing connection issues to the server:
+
+1. **Port 5000 conflicts (macOS)**: We now use port 8000 by default because port 5000 is used by AirPlay Receiver on macOS.
+
+   - If you still see port conflicts, try: `System Settings → AirDrop & Handoff → Turn off AirPlay Receiver`.
+
+2. **"Access to localhost was denied" error**:
+
+   - Ensure you're accessing the server using the correct hostname/IP and port (8000)
+   - If accessing from another device, use `http://<your-machine-ip>:8000` instead of `localhost`
+   - Check that the server is running and listening on all interfaces (`0.0.0.0`)
+   - Verify that your firewall is not blocking connections
+
+3. **Cross-Origin Issues**:
+
+   - The server has CORS (Cross-Origin Resource Sharing) enabled
+   - If you're still seeing CORS errors, ensure your browser accepts connections from your server
+
+4. **Viewing Available Connection Options**:
+   Run: `./access_info.sh` to see all available IP addresses and connection URLs
+
+### Server Administration
+
+1. **Starting the server with fixed imports**:
+
+   - Use `./fix_and_run.sh` to correctly configure imports and run the server
+
+2. **Checking if the server is running**:
+   - `curl http://localhost:8000/api/status` should return a JSON response
+3. **Testing the API**:
+   - Use `./test_api.sh` to test all main API endpoints
+   - Use `./test_new_endpoints.sh` to test the example endpoints
+
+## Frontend Integration
+
+To integrate with your own frontend application:
+
+1. Make HTTP requests to the API endpoints above
+2. Process the JSON responses according to your application's needs
+
+Example code for creating a network:
+
+```javascript
+async function createNetwork(layerSizes) {
+  const response = await fetch("http://localhost:5000/api/networks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ layer_sizes: layerSizes }),
+  });
+  return await response.json();
+}
+```
+
+## Original Project
+
+This backend system is built on top of the neural networks code from Michael Nielsen's book ["Neural Networks and Deep Learning"](http://neuralnetworksanddeeplearning.com).
 
 ## License
 
-MIT License
-
-Copyright (c) 2012-2018 Michael Nielsen
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+This project is licensed under the MIT License.
