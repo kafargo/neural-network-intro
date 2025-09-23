@@ -1,7 +1,9 @@
+# ...existing code...
 FROM python:3.9-slim
 
-# Install cron
-RUN apt-get update && apt-get -y install cron
+# Install cron (smaller image, clean apt cache)
+RUN apt-get update && apt-get -y --no-install-recommends install cron \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -10,15 +12,22 @@ WORKDIR /app
 COPY cleanup_models.sh /app/cleanup_models.sh
 RUN chmod +x /app/cleanup_models.sh
 
-# Add crontab file
-RUN echo "0 0 * * * /app/cleanup_models.sh >> /app/cleanup.log 2>&1" > /etc/cron.d/cleanup-cron
+# Add crontab file that runs cleanup and writes a heartbeat timestamp after each run
+RUN printf '%s\n' "SHELL=/bin/bash" "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin" \
+    "0 0 * * * /bin/bash -lc '/app/cleanup_models.sh >> /app/cleanup.log 2>&1 && echo \"\$(date -u +%Y-%m-%dT%H:%M:%SZ) cleanup ran\" >> /app/cleanup.heartbeat'" \
+    > /etc/cron.d/cleanup-cron
 RUN chmod 0644 /etc/cron.d/cleanup-cron
 
 # Apply cron job
 RUN crontab /etc/cron.d/cleanup-cron
 
-# Create log file
-RUN touch /app/cleanup.log
+# Create log and heartbeat files
+RUN touch /app/cleanup.log /app/cleanup.heartbeat
+
+# HEALTHCHECK: fail if heartbeat older than ~25 hours (90000s)
+HEALTHCHECK --interval=1m --timeout=10s --start-period=30s --retries=3 \
+    CMD bash -lc 'if [ -f /app/cleanup.heartbeat ]; then [ $(( $(date +%s) - $(stat -c %Y /app/cleanup.heartbeat) )) -lt 90000 ] || exit 1; else exit 1; fi'
 
 # Run cron in the foreground
 CMD ["cron", "-f"]
+# ...existing code...
