@@ -13,8 +13,14 @@ COPY . .
 # Create models directory if it doesn't exist
 RUN mkdir -p models
 
-# Expose port - Railway will set PORT env var, but default to 8000
-EXPOSE ${PORT:-8000}
+# Set production env and default port
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    FLASK_ENV=production \
+    PORT=8000
 
-# Run the application
-CMD ["python", "src/api_server.py"]
+# Expose port
+EXPOSE ${PORT}
+
+# Run with gunicorn (use shell form so ${PORT} is expanded)
+CMD ["sh", "-c", "gunicorn -w 4 -b 0.0.0.0:${PORT} src.api_server:app"]
