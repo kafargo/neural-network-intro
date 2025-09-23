@@ -23,4 +23,4 @@ ENV PYTHONUNBUFFERED=1 \
 EXPOSE ${PORT}
 
 # Run with gunicorn (use shell form so ${PORT} is expanded)
-CMD ["sh", "-c", "gunicorn -w 4 -b 0.0.0.0:${PORT} src.api_server:app"]
+CMD ["sh", "-c", "gunicorn -w 1 -b 0.0.0.0:${PORT} src.api_server:app"]
