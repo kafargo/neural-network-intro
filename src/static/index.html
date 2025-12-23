@@ -3,539 +3,343 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Neural Network Client</title>
-    <!-- Socket.IO client library (local copy) -->
-    <script
-      src="socket.io.min.js"
-      onerror="console.error('Failed to load Socket.IO library')"
-      onload="console.log('Socket.IO loaded successfully')"
-    ></script>
+    <title>Neural Network API - Status Board</title>
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
       body {
-        font-family: Arial, sans-serif;
-        max-width: 1200px;
-        margin: 0 auto;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
         padding: 20px;
-        line-height: 1.6;
+        color: #333;
       }
+
       .container {
-        display: flex;
-        flex-wrap: wrap;
+        max-width: 1000px;
+        margin: 0 auto;
       }
-      .panel {
-        flex: 1;
-        min-width: 300px;
-        margin: 10px;
-        padding: 15px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        background-color: #f9f9f9;
+
+      .header {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       }
-      .form-group {
-        margin-bottom: 15px;
+
+      h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        color: #667eea;
       }
-      label {
-        display: block;
-        margin-bottom: 5px;
+
+      .subtitle {
+        color: #666;
+        font-size: 1.1em;
+      }
+
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .status-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: transform 0.2s;
+      }
+
+      .status-card:hover {
+        transform: translateY(-5px);
+      }
+
+      .status-card h3 {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .status-value {
+        font-size: 2.5em;
         font-weight: bold;
+        color: #667eea;
       }
-      input,
-      select {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+
+      .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+        animation: pulse 2s infinite;
       }
-      button {
+
+      .status-online {
         background-color: #4caf50;
+      }
+
+      .status-offline {
+        background-color: #f44336;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+
+      .networks-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f0f0f0;
+      }
+
+      .panel-header h2 {
+        font-size: 1.5em;
+        color: #333;
+      }
+
+      .btn {
+        background-color: #667eea;
         color: white;
         border: none;
-        padding: 10px 15px;
-        border-radius: 4px;
+        padding: 10px 20px;
+        border-radius: 6px;
         cursor: pointer;
+        font-size: 1em;
+        transition: background-color 0.2s;
       }
-      button:hover {
-        background-color: #45a049;
+
+      .btn:hover {
+        background-color: #5568d3;
       }
-      .results {
-        max-height: 400px;
-        overflow-y: auto;
-        padding: 10px;
-        background-color: #fff;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        margin-top: 10px;
+
+      .btn-danger {
+        background-color: #f44336;
+        padding: 6px 12px;
+        font-size: 0.9em;
       }
+
+      .btn-danger:hover {
+        background-color: #d32f2f;
+      }
+
       .network-list {
-        list-style-type: none;
-        padding: 0;
+        list-style: none;
       }
+
       .network-item {
-        padding: 10px;
-        margin-bottom: 5px;
-        background-color: #fff;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        cursor: pointer;
+        background: #f9f9f9;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.2s;
       }
+
       .network-item:hover {
-        background-color: #f0f0f0;
+        background: #f0f0f0;
       }
-      .network-item.selected {
-        background-color: #e0f7e0;
-        border-color: #4caf50;
+
+      .network-info {
+        flex: 1;
       }
-      .digits-grid {
-        display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 10px;
-        margin-top: 15px;
+
+      .network-id {
+        font-family: monospace;
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 8px;
       }
-      .digit-box {
-        border: 1px solid #ddd;
-        text-align: center;
+
+      .network-details {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
       }
-      .digit-img {
-        max-width: 100%;
-        height: auto;
+
+      .detail-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
       }
-      .correct {
-        border-color: green;
+
+      .detail-label {
+        font-weight: 600;
+        color: #333;
       }
-      .incorrect {
-        border-color: red;
+
+      .detail-value {
+        color: #666;
       }
-      .visualize-container img {
-        width: 100%;
-        border: 1px solid #ddd;
+
+      .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.85em;
+        font-weight: 600;
       }
+
+      .badge-trained {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+      }
+
+      .badge-untrained {
+        background-color: #fff3e0;
+        color: #e65100;
+      }
+
+      .accuracy {
+        color: #4caf50;
+        font-weight: 600;
+      }
+
       .loading {
         display: inline-block;
         width: 20px;
         height: 20px;
-        border: 3px solid rgba(0, 0, 0, 0.3);
+        border: 3px solid rgba(0, 0, 0, 0.1);
         border-radius: 50%;
-        border-top-color: #4caf50;
+        border-top-color: #667eea;
         animation: spin 1s ease-in-out infinite;
-        margin-left: 10px;
-        vertical-align: middle;
       }
+
       @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
+        to { transform: rotate(360deg); }
       }
+
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+      }
+
+      .empty-state-icon {
+        font-size: 4em;
+        margin-bottom: 20px;
+      }
+
+      .message {
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+      }
+
+      .message-success {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+        border-left: 4px solid #4caf50;
+      }
+
+      .message-error {
+        background-color: #ffebee;
+        color: #c62828;
+        border-left: 4px solid #f44336;
+      }
+
       .hidden {
         display: none;
-      }
-      .error {
-        color: red;
-        margin: 5px 0;
-      }
-      .success {
-        color: green;
-        margin: 5px 0;
-      }
-      .status-bar {
-        background-color: #f0f0f0;
-        padding: 5px 10px;
-        margin-bottom: 15px;
-        border-radius: 4px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .tab-container {
-        margin-bottom: 15px;
-      }
-      .tab-buttons {
-        display: flex;
-        border-bottom: 1px solid #ddd;
-      }
-      .tab-button {
-        padding: 10px 15px;
-        background: none;
-        border: 1px solid transparent;
-        border-radius: 4px 4px 0 0;
-        margin-bottom: -1px;
-        cursor: pointer;
-      }
-      .tab-button.active {
-        background-color: #fff;
-        border-color: #ddd;
-        border-bottom-color: #fff;
-      }
-      .tab-content {
-        display: none;
-        padding: 15px;
-        border: 1px solid #ddd;
-        border-top: none;
-      }
-      .tab-content.active {
-        display: block;
-      }
-      .text-center {
-        text-align: center;
-      }
-      .collapsed {
-        display: none;
-      }
-      .collapse-btn {
-        cursor: pointer;
-        padding: 5px;
-        transition: background-color 0.3s;
-      }
-      .collapse-btn:hover {
-        background-color: #e0e0e0;
-      }
-      .button-group {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 10px;
-      }
-
-      .progress-container {
-        width: 100%;
-        background-color: #ddd;
-        border-radius: 4px;
-        margin: 10px 0;
-      }
-
-      .progress-bar {
-        height: 24px;
-        background-color: #4caf50;
-        border-radius: 4px;
-        text-align: center;
-        line-height: 24px;
-        color: white;
-        transition: width 0.3s;
-      }
-
-      .training-info {
-        margin-top: 10px;
-        padding: 10px;
-        background-color: #f0f8ff;
-        border-radius: 4px;
-        border: 1px solid #add8e6;
-      }
-
-      .training-metrics {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-        margin-top: 10px;
-      }
-
-      .metric {
-        padding: 8px;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-        border: 1px solid #eee;
       }
     </style>
   </head>
   <body>
-    <h1>Neural Network Client</h1>
-
-    <div class="status-bar">
-      <span>API Status: <span id="api-status">Checking...</span></span>
-      <span>Networks: <span id="networks-count">0</span></span>
-      <span>Training Jobs: <span id="jobs-count">0</span></span>
-    </div>
-
     <div class="container">
-      <div class="panel">
-        <h2>Network Management</h2>
+      <div class="header">
+        <h1>Neural Network API</h1>
+        <p class="subtitle">Status Board & Network Management</p>
+      </div>
 
-        <div class="tab-container">
-          <div class="tab-buttons">
-            <button class="tab-button active" data-tab="create">
-              Create Network
-            </button>
-            <button class="tab-button" data-tab="list">
-              Available Networks
-            </button>
+      <div class="status-grid">
+        <div class="status-card">
+          <h3>API Status</h3>
+          <div class="status-value">
+            <span class="status-indicator status-offline" id="api-indicator"></span>
+            <span id="api-status">Checking...</span>
           </div>
-
-          <div id="create-tab" class="tab-content active">
-            <div class="form-group">
-              <label for="architecture">Network Architecture:</label>
-              <input
-                type="text"
-                id="architecture"
-                placeholder="e.g., 784,30,10"
-                value="784,30,10"
-              />
-              <small>Comma-separated list of neurons per layer</small>
-            </div>
-            <button id="create-btn">Create Network</button>
-            <div id="create-result" class="results"></div>
-          </div>
-
-          <div id="list-tab" class="tab-content">
-            <button id="refresh-networks-btn">Refresh List</button>
-            <div id="network-list-container" class="results">
-              <ul class="network-list" id="network-list"></ul>
-            </div>
-          </div>
+        </div>
+        <div class="status-card">
+          <h3>Active Networks</h3>
+          <div class="status-value" id="networks-count">0</div>
+        </div>
+        <div class="status-card">
+          <h3>Training Jobs</h3>
+          <div class="status-value" id="jobs-count">0</div>
         </div>
       </div>
 
-      <div class="panel">
-        <h2>Training</h2>
-        <div class="form-group">
-          <label for="network-id-train">Network ID:</label>
-          <input type="text" id="network-id-train" readonly />
-        </div>
-        <div class="form-group">
-          <label for="epochs">Epochs:</label>
-          <input type="number" id="epochs" min="1" value="5" />
-        </div>
-        <div class="form-group">
-          <label for="batch-size">Mini-batch Size:</label>
-          <input type="number" id="batch-size" min="1" value="10" />
-        </div>
-        <div class="form-group">
-          <label for="learning-rate">Learning Rate:</label>
-          <input
-            type="number"
-            id="learning-rate"
-            min="0.1"
-            step="0.1"
-            value="3.0"
-          />
-        </div>
-        <button id="train-btn">Start Training</button>
-        <div id="train-result" class="results"></div>
 
-        <div id="training-status" class="hidden">
-          <h3>Training Status</h3>
-          <div class="form-group">
-            <label for="job-id">Job ID:</label>
-            <input type="text" id="job-id" readonly />
-          </div>
-
-          <!-- Real-time training progress -->
-          <div id="real-time-progress" class="hidden">
-            <h4>Real-time Training Progress</h4>
-            <div class="progress-container">
-              <div
-                id="training-progress-bar"
-                class="progress-bar"
-                style="width: 0%"
-              >
-                0%
-              </div>
-            </div>
-
-            <div class="training-info">
-              <div id="current-epoch">Waiting for training to start...</div>
-              <div class="training-metrics">
-                <div class="metric">
-                  <strong>Accuracy:</strong>
-                  <span id="current-accuracy">-</span>
-                </div>
-                <div class="metric">
-                  <strong>Correct/Total:</strong>
-                  <span id="current-correct-total">-</span>
-                </div>
-                <div class="metric">
-                  <strong>Elapsed:</strong> <span id="current-elapsed">-</span>
-                </div>
-                <div class="metric">
-                  <strong>Remaining Epochs:</strong>
-                  <span id="remaining-epochs">-</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <button id="check-status-btn">Check Status</button>
-          <div id="status-result" class="results"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="container">
-      <div class="panel">
-        <h2>Test Network</h2>
-        <div class="form-group">
-          <label for="network-id-test">Network ID:</label>
-          <input type="text" id="network-id-test" readonly />
-        </div>
-        <div class="form-group">
-          <label for="test-count">Number of Examples:</label>
-          <input type="number" id="test-count" min="1" max="20" value="10" />
-        </div>
-        <button id="test-batch-btn">Test Batch</button>
-        <div id="test-batch-result" class="results" style="display: none">
-          <!-- Grid will be created dynamically -->
+      <div class="networks-panel">
+        <div class="panel-header">
+          <h2>Networks</h2>
+          <button class="btn" id="refresh-btn">Refresh</button>
         </div>
 
-        <h3>Find Misclassified Examples</h3>
-        <div class="form-group">
-          <label for="max-count">Max Examples:</label>
-          <input type="number" id="max-count" min="1" max="20" value="10" />
-        </div>
-        <button id="find-misclassified-btn">Find Misclassified</button>
-        <div id="misclassified-result" class="results" style="display: none">
-          <!-- Grid will be created dynamically -->
-        </div>
-      </div>
+        <div id="message-container"></div>
 
-      <div class="panel">
-        <h2>Visualization</h2>
-        <div class="form-group">
-          <label for="network-id-vis">Network ID:</label>
-          <input type="text" id="network-id-vis" readonly />
-        </div>
-        <button id="visualize-btn">Visualize Network</button>
-        <div id="visualize-result" class="visualize-container results"></div>
-
-        <h3>Network Statistics</h3>
-        <button id="get-stats-btn">Get Statistics</button>
-        <div id="stats-result" class="results"></div>
-
-        <h3>Example Analysis</h3>
-        <div style="display: flex; gap: 10px; margin-bottom: 10px">
-          <button id="successful-example-btn">Get Successful Example</button>
-          <button id="unsuccessful-example-btn">
-            Get Unsuccessful Example
-          </button>
-        </div>
-        <div id="example-result" class="results">
-          <div id="example-image" class="text-center"></div>
-          <div id="example-details"></div>
-          <div style="margin-top: 15px">
-            <button
-              class="collapse-btn"
-              data-target="weights-section"
-              style="width: 100%; background-color: #f0f0f0; color: #333"
-            >
-              Show/Hide Output Weights
-            </button>
-            <div
-              id="weights-section"
-              class="collapsed"
-              style="display: none; margin-top: 10px"
-            >
-              <pre
-                id="weights-data"
-                style="
-                  max-height: 200px;
-                  overflow: auto;
-                  background-color: #f9f9f9;
-                  padding: 10px;
-                  font-size: 12px;
-                "
-              ></pre>
-            </div>
-          </div>
-        </div>
+        <ul class="network-list" id="network-list">
+          <li class="empty-state">
+            <div class="empty-state-icon">🧠</div>
+            <p>Loading networks...</p>
+          </li>
+        </ul>
       </div>
     </div>
 
     <script>
-      // Initialize Socket.IO connection
-      let socket;
-      let currentTrainingJob = null;
-
       // Constants
-      // Determine the API URL based on the hosting environment
       const getApiBaseUrl = () => {
-        // Check for any cloud hosting like Railway.app or Railway.com
         if (window.location.hostname.includes("railway")) {
-          // When hosted on Railway, the API is on the same origin
           return `/api`;
         } else if (window.location.protocol === "https:") {
-          // For HTTPS sites, we must use HTTPS for API to avoid mixed content
           return `https://${window.location.hostname}:8000/api`;
         } else {
-          // For local development, use protocol-relative URL (adapts to HTTP/HTTPS)
           return `//${window.location.hostname}:8000/api`;
         }
       };
       const API_BASE_URL = getApiBaseUrl();
 
-      // State
-      let selectedNetworkId = null;
-
       // DOM Elements
       const apiStatusElem = document.getElementById("api-status");
+      const apiIndicatorElem = document.getElementById("api-indicator");
       const networksCountElem = document.getElementById("networks-count");
       const jobsCountElem = document.getElementById("jobs-count");
+      const networkListElem = document.getElementById("network-list");
+      const messageContainer = document.getElementById("message-container");
 
-      // Tab switching
-      document.querySelectorAll(".tab-button").forEach((button) => {
-        button.addEventListener("click", function () {
-          // Remove active class from all buttons and content
-          document
-            .querySelectorAll(".tab-button")
-            .forEach((btn) => btn.classList.remove("active"));
-          document
-            .querySelectorAll(".tab-content")
-            .forEach((content) => content.classList.remove("active"));
-
-          // Add active class to clicked button and corresponding content
-          this.classList.add("active");
-          const tabId = this.getAttribute("data-tab");
-          document.getElementById(`${tabId}-tab`).classList.add("active");
-        });
-      });
-
-      // Helper functions
-      function showLoading(elementId) {
-        const element = document.getElementById(elementId);
-        if (element) {
-          element.innerHTML = '<div class="loading"></div> Processing...';
-          element.style.display = "block";
-        } else {
-          console.warn(
-            `Element with ID ${elementId} not found for showLoading`
-          );
-        }
+      // Show messages
+      function showMessage(message, type = 'success') {
+        messageContainer.innerHTML = `<div class="message message-${type}">${message}</div>`;
+        setTimeout(() => {
+          messageContainer.innerHTML = '';
+        }, 5000);
       }
 
-      function showError(elementId, message) {
-        const element = document.getElementById(elementId);
-        if (element) {
-          element.innerHTML = `<div class="error">${message}</div>`;
-          element.style.display = "block";
-        } else {
-          console.warn(
-            `Element with ID ${elementId} not found for showError: ${message}`
-          );
-        }
-      }
-
-      function showSuccess(elementId, message) {
-        const element = document.getElementById(elementId);
-        if (element) {
-          element.innerHTML = `<div class="success">${message}</div>`;
-          element.style.display = "block";
-        } else {
-          console.warn(
-            `Element with ID ${elementId} not found for showSuccess: ${message}`
-          );
-        }
-      }
-
-      function updateSelectedNetwork(networkId) {
-        selectedNetworkId = networkId;
-        document.getElementById("network-id-train").value = networkId;
-        document.getElementById("network-id-test").value = networkId;
-        document.getElementById("network-id-vis").value = networkId;
-
-        // Update selected network in the list
-        document.querySelectorAll(".network-item").forEach((item) => {
-          item.classList.remove("selected");
-          if (item.dataset.networkId === networkId) {
-            item.classList.add("selected");
-          }
-        });
-      }
-
-      // API Functions
+      // Check API Status
       async function checkApiStatus() {
         try {
           const response = await fetch(`${API_BASE_URL}/status`);
@@ -543,818 +347,108 @@
 
           const data = await response.json();
           apiStatusElem.textContent = "Online";
-          apiStatusElem.style.color = "green";
+          apiIndicatorElem.className = "status-indicator status-online";
           networksCountElem.textContent = data.active_networks;
           jobsCountElem.textContent = data.training_jobs;
         } catch (error) {
           apiStatusElem.textContent = "Offline";
-          apiStatusElem.style.color = "red";
+          apiIndicatorElem.className = "status-indicator status-offline";
           console.error("API Status Error:", error);
         }
       }
 
-      // Create Network
-      async function createNetwork() {
-        const architectureStr = document.getElementById("architecture").value;
-        const layer_sizes = architectureStr.split(",").map(Number);
-
-        if (layer_sizes.some(isNaN) || layer_sizes.length < 2) {
-          showError(
-            "create-result",
-            "Invalid architecture. Please provide valid numbers."
-          );
-          return;
-        }
-
-        showLoading("create-result");
-
-        try {
-          const response = await fetch(`${API_BASE_URL}/networks`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ layer_sizes }),
-          });
-
-          if (!response.ok) throw new Error("Failed to create network");
-
-          const data = await response.json();
-          showSuccess(
-            "create-result",
-            `Network created with ID: ${data.network_id}`
-          );
-          updateSelectedNetwork(data.network_id);
-          checkApiStatus();
-          loadNetworkList();
-        } catch (error) {
-          showError("create-result", `Error: ${error.message}`);
-          console.error("Create Network Error:", error);
-        }
-      }
-
-      // List Networks
-      async function loadNetworkList() {
-        showLoading("network-list-container");
-
+      // Load Networks
+      async function loadNetworks() {
         try {
           const response = await fetch(`${API_BASE_URL}/networks`);
           if (!response.ok) throw new Error("Failed to load networks");
 
           const data = await response.json();
-          const networkList = document.getElementById("network-list");
-          networkList.innerHTML = "";
 
           if (data.networks.length === 0) {
-            networkList.innerHTML = "<li>No networks available</li>";
+            networkListElem.innerHTML = `
+              <li class="empty-state">
+                <div class="empty-state-icon">🧠</div>
+                <p>No networks available</p>
+              </li>
+            `;
           } else {
-            data.networks.forEach((network) => {
-              const item = document.createElement("li");
-              item.className = "network-item";
-              if (network.network_id === selectedNetworkId) {
-                item.classList.add("selected");
-              }
-              item.dataset.networkId = network.network_id;
+            networkListElem.innerHTML = data.networks.map(network => {
+              const architecture = network.architecture.join(" → ");
+              const accuracy = network.accuracy
+                ? `<span class="accuracy">${(network.accuracy * 100).toFixed(2)}%</span>`
+                : '<span class="detail-value">N/A</span>';
+              const trainedBadge = network.trained
+                ? '<span class="badge badge-trained">Trained</span>'
+                : '<span class="badge badge-untrained">Untrained</span>';
 
-              let architecture = network.architecture.join("-");
-              let accuracy = network.accuracy
-                ? `(${(network.accuracy * 100).toFixed(2)}%)`
-                : "";
-              let status =
-                network.status === "in_memory" ? "In Memory" : "Saved";
-              let trained = network.trained ? "Trained" : "Untrained";
-
-              item.innerHTML = `
-                            <strong>ID:</strong> ${network.network_id.substring(
-                              0,
-                              8
-                            )}...<br>
-                            <strong>Architecture:</strong> ${architecture}<br>
-                            <strong>Status:</strong> ${status} | ${trained} ${accuracy}
-                        `;
-
-              item.addEventListener("click", () => {
-                updateSelectedNetwork(network.network_id);
-              });
-
-              networkList.appendChild(item);
-            });
+              return `
+                <li class="network-item">
+                  <div class="network-info">
+                    <div class="network-id">ID: ${network.network_id}</div>
+                    <div class="network-details">
+                      <div class="detail-item">
+                        <span class="detail-label">Architecture:</span>
+                        <span class="detail-value">${architecture}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">Accuracy:</span>
+                        ${accuracy}
+                      </div>
+                      <div class="detail-item">
+                        ${trainedBadge}
+                      </div>
+                    </div>
+                  </div>
+                  <button class="btn btn-danger" onclick="deleteNetwork('${network.network_id}')">Delete</button>
+                </li>
+              `;
+            }).join('');
           }
+
+          checkApiStatus();
         } catch (error) {
-          showError("network-list-container", `Error: ${error.message}`);
+          networkListElem.innerHTML = `
+            <li class="empty-state">
+              <div class="empty-state-icon">⚠️</div>
+              <p>Error loading networks: ${error.message}</p>
+            </li>
+          `;
           console.error("Load Networks Error:", error);
         }
       }
 
-      // Initialize Socket.IO
-      function initializeSocket() {
-        console.log("DEBUG: initializeSocket called");
-
-        // Check if io is available
-        if (typeof io === "undefined") {
-          console.error(
-            "DEBUG: Socket.IO library not loaded! 'io' is undefined"
-          );
+      // Delete Network
+      async function deleteNetwork(networkId) {
+        if (!confirm(`Are you sure you want to delete network ${networkId.substring(0, 8)}...?`)) {
           return;
         }
-
-        console.log("DEBUG: Socket.IO library is available");
-
-        // Only initialize once
-        if (!socket) {
-          console.log("DEBUG: Creating new socket connection");
-          try {
-            // Connect to the server
-            socket = io();
-            console.log("DEBUG: Socket object created:", socket);
-
-            // Listen for training updates
-            socket.on("training_update", function (data) {
-              console.log("DEBUG: Training update received:", data);
-              updateTrainingProgress(data);
-            });
-
-            // Handle connection events
-            socket.on("connect", function () {
-              console.log("DEBUG: WebSocket connected, socket ID:", socket.id);
-            });
-
-            socket.on("disconnect", function () {
-              console.log("DEBUG: WebSocket disconnected");
-            });
-
-            socket.on("connect_error", function (error) {
-              console.error("DEBUG: WebSocket connection error:", error);
-            });
-          } catch (error) {
-            console.error("DEBUG: Error creating socket:", error);
-          }
-        } else {
-          console.log("DEBUG: Socket already initialized");
-        }
-      }
-
-      // Update the training progress UI
-      function updateTrainingProgress(data) {
-        console.log("DEBUG: updateTrainingProgress called with:", data);
-
-        // Show the real-time progress section
-        const progressSection = document.getElementById("real-time-progress");
-        console.log("DEBUG: Progress section element:", progressSection);
-
-        if (progressSection) {
-          progressSection.classList.remove("hidden");
-          console.log("DEBUG: Progress section shown");
-        } else {
-          console.error("DEBUG: Could not find real-time-progress element");
-        }
-
-        // Update progress bar
-        const progressBar = document.getElementById("training-progress-bar");
-        console.log("DEBUG: Progress bar element:", progressBar);
-
-        if (progressBar) {
-          const progressValue = Math.round(data.progress);
-          progressBar.style.width = `${progressValue}%`;
-          progressBar.textContent = `${progressValue}%`;
-          console.log("DEBUG: Progress bar updated to:", progressValue + "%");
-        } else {
-          console.error("DEBUG: Could not find training-progress-bar element");
-        }
-
-        // Update current epoch info
-        document.getElementById(
-          "current-epoch"
-        ).textContent = `Epoch ${data.epoch} of ${data.total_epochs}`;
-
-        // Update accuracy
-        if (data.accuracy !== null) {
-          const accuracyPercent = (data.accuracy * 100).toFixed(2);
-          document.getElementById(
-            "current-accuracy"
-          ).textContent = `${accuracyPercent}%`;
-        }
-
-        // Update correct/total
-        if (data.correct !== undefined && data.total !== undefined) {
-          document.getElementById(
-            "current-correct-total"
-          ).textContent = `${data.correct} / ${data.total}`;
-        }
-
-        // Update elapsed time
-        document.getElementById(
-          "current-elapsed"
-        ).textContent = `${data.elapsed_time.toFixed(2)}s`;
-
-        // Update remaining epochs
-        const remaining = data.total_epochs - data.epoch;
-        document.getElementById("remaining-epochs").textContent = remaining;
-      }
-
-      // Train Network
-      async function trainNetwork() {
-        const networkId = document.getElementById("network-id-train").value;
-        const epochs = parseInt(document.getElementById("epochs").value);
-        const miniBatchSize = parseInt(
-          document.getElementById("batch-size").value
-        );
-        const learningRate = parseFloat(
-          document.getElementById("learning-rate").value
-        );
-
-        if (!networkId) {
-          showError("train-result", "No network selected.");
-          return;
-        }
-
-        showLoading("train-result");
-
-        // Initialize the WebSocket connection if not already done
-        initializeSocket();
 
         try {
-          const response = await fetch(
-            `${API_BASE_URL}/networks/${networkId}/train`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                epochs,
-                mini_batch_size: miniBatchSize,
-                learning_rate: learningRate,
-              }),
-            }
-          );
-
-          if (!response.ok) throw new Error("Failed to start training");
-
-          const data = await response.json();
-          showSuccess(
-            "train-result",
-            `Training started with job ID: ${data.job_id}`
-          );
-
-          // Store current training job
-          currentTrainingJob = data.job_id;
-
-          // Update the training status section
-          document.getElementById("training-status").classList.remove("hidden");
-          document.getElementById("job-id").value = data.job_id;
-
-          // Reset and show the real-time progress UI
-          document
-            .getElementById("real-time-progress")
-            .classList.remove("hidden");
-          document.getElementById("training-progress-bar").style.width = "0%";
-          document.getElementById("training-progress-bar").textContent = "0%";
-          document.getElementById("current-epoch").textContent =
-            "Waiting for first epoch to complete...";
-        } catch (error) {
-          showError("train-result", `Error: ${error.message}`);
-          console.error("Train Network Error:", error);
-        }
-      }
-
-      // Check Training Status
-      async function checkTrainingStatus() {
-        const jobId = document.getElementById("job-id").value;
-
-        if (!jobId) {
-          showError("status-result", "No job ID provided.");
-          return;
-        }
-
-        showLoading("status-result");
-
-        try {
-          const response = await fetch(`${API_BASE_URL}/training/${jobId}`);
-          if (!response.ok) throw new Error("Failed to check status");
-
-          const data = await response.json();
-          let statusHtml = `<strong>Status:</strong> ${data.status}<br>`;
-
-          if (data.status === "completed") {
-            statusHtml += `<strong>Accuracy:</strong> ${(
-              data.accuracy * 100
-            ).toFixed(2)}%<br>`;
-            statusHtml += `<strong>Epochs:</strong> ${data.epochs}`;
-          } else if (data.status === "failed") {
-            statusHtml += `<strong>Error:</strong> ${data.error}`;
-          }
-
-          document.getElementById("status-result").innerHTML = statusHtml;
-
-          // If training is complete, refresh the network list
-          if (data.status === "completed") {
-            loadNetworkList();
-            checkApiStatus();
-          }
-        } catch (error) {
-          showError("status-result", `Error: ${error.message}`);
-          console.error("Check Status Error:", error);
-        }
-      }
-
-      // Test Batch
-      async function testBatch() {
-        const networkId = document.getElementById("network-id-test").value;
-        const count = parseInt(document.getElementById("test-count").value);
-
-        if (!networkId) {
-          showError("test-batch-result", "No network selected.");
-          return;
-        }
-
-        showLoading("test-batch-result");
-
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/networks/${networkId}/predict_batch`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                start_index: Math.floor(Math.random() * 1000),
-                count,
-              }),
-            }
-          );
-
-          if (!response.ok) throw new Error("Failed to run predictions");
-
-          const data = await response.json();
-          // Get the result container first
-          const resultContainer = document.getElementById("test-batch-result");
-          resultContainer.style.display = "block";
-
-          // Make sure the grid exists
-          let grid = document.getElementById("digits-grid");
-
-          // If grid doesn't exist, create it
-          if (!grid) {
-            grid = document.createElement("div");
-            grid.id = "digits-grid";
-            grid.className = "digits-grid";
-            resultContainer.appendChild(grid);
-          } else {
-            grid.innerHTML = "";
-          }
-
-          data.results.forEach((result) => {
-            const box = document.createElement("div");
-            box.className = "digit-box";
-            if (result.correct) {
-              box.classList.add("correct");
-            } else {
-              box.classList.add("incorrect");
-            }
-
-            box.innerHTML = `
-                        <img class="digit-img" src="data:image/png;base64,${result.image_data}">
-                        <div>Pred: ${result.predicted_digit}</div>
-                        <div>Actual: ${result.actual_digit}</div>
-                    `;
-
-            grid.appendChild(box);
+          const response = await fetch(`${API_BASE_URL}/networks/${networkId}`, {
+            method: 'DELETE'
           });
+
+          if (!response.ok) throw new Error("Failed to delete network");
+
+          showMessage(`Network ${networkId.substring(0, 8)}... deleted successfully`, 'success');
+          loadNetworks();
         } catch (error) {
-          showError("test-batch-result", `Error: ${error.message}`);
-          console.error("Test Batch Error:", error);
+          showMessage(`Error deleting network: ${error.message}`, 'error');
+          console.error("Delete Network Error:", error);
         }
       }
-
-      // Find Misclassified
-      async function findMisclassified() {
-        const networkId = document.getElementById("network-id-test").value;
-        const maxCount = parseInt(document.getElementById("max-count").value);
-
-        if (!networkId) {
-          showError("misclassified-result", "No network selected.");
-          return;
-        }
-
-        showLoading("misclassified-result");
-
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/networks/${networkId}/misclassified?max_count=${maxCount}`
-          );
-          if (!response.ok)
-            throw new Error("Failed to find misclassified examples");
-
-          const data = await response.json();
-
-          // Get the result container first
-          const resultContainer = document.getElementById(
-            "misclassified-result"
-          );
-          resultContainer.style.display = "block";
-
-          // Make sure the grid exists
-          let grid = document.getElementById("misclassified-grid");
-
-          // If grid doesn't exist, create it
-          if (!grid) {
-            grid = document.createElement("div");
-            grid.id = "misclassified-grid";
-            grid.className = "digits-grid";
-            resultContainer.appendChild(grid);
-          } else {
-            grid.innerHTML = "";
-          }
-
-          if (data.misclassified.length === 0) {
-            grid.innerHTML = "<div>No misclassified examples found</div>";
-          } else {
-            data.misclassified.forEach((result) => {
-              const box = document.createElement("div");
-              box.className = "digit-box incorrect";
-
-              box.innerHTML = `
-                            <img class="digit-img" src="data:image/png;base64,${result.image_data}">
-                            <div>Pred: ${result.predicted_digit}</div>
-                            <div>Actual: ${result.actual_digit}</div>
-                        `;
-
-              grid.appendChild(box);
-            });
-          }
-        } catch (error) {
-          showError("misclassified-result", `Error: ${error.message}`);
-          console.error("Find Misclassified Error:", error);
-        }
-      }
-
-      // Visualize Network
-      async function visualizeNetwork() {
-        const networkId = document.getElementById("network-id-vis").value;
-
-        if (!networkId) {
-          showError("visualize-result", "No network selected.");
-          return;
-        }
-
-        showLoading("visualize-result");
-
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/networks/${networkId}/visualize`
-          );
-          if (!response.ok) throw new Error("Failed to visualize network");
-
-          const data = await response.json();
-          const resultElement = document.getElementById("visualize-result");
-          if (resultElement) {
-            resultElement.style.display = "block";
-            resultElement.innerHTML = `
-              <img src="data:image/png;base64,${data.visualization}" alt="Network Visualization">
-            `;
-          } else {
-            console.error("visualize-result element not found");
-          }
-        } catch (error) {
-          showError("visualize-result", `Error: ${error.message}`);
-          console.error("Visualize Network Error:", error);
-        }
-      }
-
-      // Get Network Stats
-      async function getNetworkStats() {
-        const networkId = document.getElementById("network-id-vis").value;
-
-        if (!networkId) {
-          showError("stats-result", "No network selected.");
-          return;
-        }
-
-        showLoading("stats-result");
-
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/networks/${networkId}/stats`
-          );
-          if (!response.ok) throw new Error("Failed to get network statistics");
-
-          const data = await response.json();
-          let statsHtml = `
-                    <h4>Network Architecture: ${data.architecture.join(
-                      "-"
-                    )}</h4>
-                    <p><strong>Trained:</strong> ${
-                      data.trained ? "Yes" : "No"
-                    }</p>
-                `;
-
-          if (data.accuracy !== null) {
-            statsHtml += `<p><strong>Accuracy:</strong> ${(
-              data.accuracy * 100
-            ).toFixed(2)}%</p>`;
-          }
-
-          // Weights stats
-          statsHtml +=
-            '<h4>Weights</h4><table style="width:100%; border-collapse: collapse;">';
-          statsHtml +=
-            '<tr><th style="text-align:left;">Layer</th><th>Mean</th><th>Min</th><th>Max</th><th>Std</th><th>Shape</th></tr>';
-          data.weight_stats.forEach((stat) => {
-            statsHtml += `<tr>
-                        <td>${stat.layer}</td>
-                        <td>${stat.mean.toFixed(4)}</td>
-                        <td>${stat.min.toFixed(4)}</td>
-                        <td>${stat.max.toFixed(4)}</td>
-                        <td>${stat.std.toFixed(4)}</td>
-                        <td>${stat.shape.join("×")}</td>
-                    </tr>`;
-          });
-          statsHtml += "</table>";
-
-          // Biases stats
-          statsHtml +=
-            '<h4>Biases</h4><table style="width:100%; border-collapse: collapse;">';
-          statsHtml +=
-            '<tr><th style="text-align:left;">Layer</th><th>Mean</th><th>Min</th><th>Max</th><th>Std</th><th>Shape</th></tr>';
-          data.bias_stats.forEach((stat) => {
-            statsHtml += `<tr>
-                        <td>${stat.layer}</td>
-                        <td>${stat.mean.toFixed(4)}</td>
-                        <td>${stat.min.toFixed(4)}</td>
-                        <td>${stat.max.toFixed(4)}</td>
-                        <td>${stat.std.toFixed(4)}</td>
-                        <td>${stat.shape.join("×")}</td>
-                    </tr>`;
-          });
-          statsHtml += "</table>";
-
-          document.getElementById("stats-result").innerHTML = statsHtml;
-        } catch (error) {
-          showError("stats-result", `Error: ${error.message}`);
-          console.error("Get Network Stats Error:", error);
-        }
-      }
-
-      // Get a successful example
-      async function getSuccessfulExample() {
-        const networkId = document.getElementById("network-id-vis").value;
-
-        if (!networkId) {
-          showError("example-result", "No network selected.");
-          return;
-        }
-
-        showLoading("example-result");
-
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/networks/${networkId}/successful_example`
-          );
-          if (!response.ok) throw new Error("Failed to get successful example");
-
-          const data = await response.json();
-
-          // Make sure result container exists and is visible
-          const resultElement = document.getElementById("example-result");
-          if (!resultElement) {
-            console.error("example-result element not found");
-            return;
-          }
-          resultElement.style.display = "block";
-
-          // Get or create image element
-          let imageElement = document.getElementById("example-image");
-          if (!imageElement) {
-            imageElement = document.createElement("div");
-            imageElement.id = "example-image";
-            resultElement.appendChild(imageElement);
-          }
-
-          // Display the image and details
-          imageElement.innerHTML = `
-            <img src="data:image/png;base64,${data.image_data}" alt="Successful Example" style="max-width: 200px;">
-            <div style="margin-top: 10px;">
-              <strong>Predicted:</strong> ${data.predicted_digit} | 
-              <strong>Actual:</strong> ${data.actual_digit} |
-              <strong>Example Index:</strong> ${data.example_index}
-            </div>
-          `;
-
-          // Get or create details element
-          let detailsElement = document.getElementById("example-details");
-          if (!detailsElement) {
-            detailsElement = document.createElement("div");
-            detailsElement.id = "example-details";
-            resultElement.appendChild(detailsElement);
-          }
-
-          // Display network output
-          let outputHtml = '<h4>Network Output</h4><table style="width:100%;">';
-          outputHtml += "<tr><th>Digit</th><th>Confidence</th></tr>";
-
-          data.network_output.forEach((output, i) => {
-            const isHighest = i === data.predicted_digit;
-            const style = isHighest
-              ? "background-color: #e0f7e0; font-weight: bold;"
-              : "";
-            outputHtml += `<tr style="${style}">
-              <td>${i}</td>
-              <td>${(output * 100).toFixed(2)}%</td>
-            </tr>`;
-          });
-          outputHtml += "</table>";
-
-          detailsElement.innerHTML = outputHtml;
-
-          // Get or create weights data element
-          let weightsElement = document.getElementById("weights-data");
-          if (!weightsElement) {
-            weightsElement = document.createElement("pre");
-            weightsElement.id = "weights-data";
-            resultElement.appendChild(weightsElement);
-          }
-
-          // Store weights data
-          weightsElement.textContent = JSON.stringify(
-            data.output_weights,
-            null,
-            2
-          );
-        } catch (error) {
-          showError("example-result", `Error: ${error.message}`);
-          console.error("Get Successful Example Error:", error);
-        }
-      }
-
-      // Get an unsuccessful example
-      async function getUnsuccessfulExample() {
-        const networkId = document.getElementById("network-id-vis").value;
-
-        if (!networkId) {
-          showError("example-result", "No network selected.");
-          return;
-        }
-
-        showLoading("example-result");
-
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/networks/${networkId}/unsuccessful_example`
-          );
-          if (!response.ok)
-            throw new Error("Failed to get unsuccessful example");
-
-          const data = await response.json();
-
-          // Make sure result container exists and is visible
-          const resultElement = document.getElementById("example-result");
-          if (!resultElement) {
-            console.error("example-result element not found");
-            return;
-          }
-          resultElement.style.display = "block";
-
-          // Get or create image element
-          let imageElement = document.getElementById("example-image");
-          if (!imageElement) {
-            imageElement = document.createElement("div");
-            imageElement.id = "example-image";
-            resultElement.appendChild(imageElement);
-          }
-
-          // Display the image and details
-          imageElement.innerHTML = `
-            <img src="data:image/png;base64,${data.image_data}" alt="Unsuccessful Example" style="max-width: 200px;">
-            <div style="margin-top: 10px; color: red;">
-              <strong>Predicted:</strong> ${data.predicted_digit} | 
-              <strong>Actual:</strong> ${data.actual_digit} |
-              <strong>Example Index:</strong> ${data.example_index}
-            </div>
-          `;
-
-          // Display network output
-          let outputHtml = '<h4>Network Output</h4><table style="width:100%;">';
-          outputHtml +=
-            "<tr><th>Digit</th><th>Confidence</th><th>Status</th></tr>";
-
-          data.network_output.forEach((output, i) => {
-            const isPredicted = i === data.predicted_digit;
-            const isActual = i === data.actual_digit;
-            let style = "";
-            let status = "";
-
-            if (isPredicted) {
-              style = "background-color: #ffcccc; font-weight: bold;";
-              status = "Predicted (Incorrect)";
-            } else if (isActual) {
-              style = "background-color: #cce5ff; font-weight: bold;";
-              status = "Actual (Should be this)";
-            }
-
-            outputHtml += `<tr style="${style}">
-              <td>${i}</td>
-              <td>${(output * 100).toFixed(2)}%</td>
-              <td>${status}</td>
-            </tr>`;
-          });
-          outputHtml += "</table>";
-
-          // Get or create details element
-          let detailsElement = document.getElementById("example-details");
-          if (!detailsElement) {
-            detailsElement = document.createElement("div");
-            detailsElement.id = "example-details";
-            resultElement.appendChild(detailsElement);
-          }
-
-          detailsElement.innerHTML = outputHtml;
-
-          // Get or create weights data element
-          let weightsElement = document.getElementById("weights-data");
-          if (!weightsElement) {
-            weightsElement = document.createElement("pre");
-            weightsElement.id = "weights-data";
-            resultElement.appendChild(weightsElement);
-          }
-
-          weightsElement.textContent = JSON.stringify(
-            data.output_weights,
-            null,
-            2
-          );
-
-          // Make weights section visible
-          document.getElementById("example-result").style.display = "block";
-        } catch (error) {
-          showError("example-result", `Error: ${error.message}`);
-          console.error("Get Unsuccessful Example Error:", error);
-        }
-      }
-
-      // Toggle collapsible sections
-      document.addEventListener("click", function (e) {
-        if (e.target && e.target.classList.contains("collapse-btn")) {
-          const targetId = e.target.dataset.target;
-          const targetElement = document.getElementById(targetId);
-
-          if (targetElement) {
-            targetElement.classList.toggle("collapsed");
-            if (!targetElement.classList.contains("collapsed")) {
-              targetElement.style.display = "block";
-            } else {
-              targetElement.style.display = "none";
-            }
-          }
-        }
-      });
 
       // Event Listeners
-      document
-        .getElementById("create-btn")
-        .addEventListener("click", createNetwork);
-      document
-        .getElementById("refresh-networks-btn")
-        .addEventListener("click", loadNetworkList);
-      document
-        .getElementById("train-btn")
-        .addEventListener("click", trainNetwork);
-      document
-        .getElementById("check-status-btn")
-        .addEventListener("click", checkTrainingStatus);
-      document
-        .getElementById("test-batch-btn")
-        .addEventListener("click", testBatch);
-      document
-        .getElementById("find-misclassified-btn")
-        .addEventListener("click", findMisclassified);
-      document
-        .getElementById("visualize-btn")
-        .addEventListener("click", visualizeNetwork);
-      document
-        .getElementById("get-stats-btn")
-        .addEventListener("click", getNetworkStats);
-
-      // Add event listeners for the new buttons
-      if (document.getElementById("successful-example-btn")) {
-        document
-          .getElementById("successful-example-btn")
-          .addEventListener("click", getSuccessfulExample);
-      }
-
-      if (document.getElementById("unsuccessful-example-btn")) {
-        document
-          .getElementById("unsuccessful-example-btn")
-          .addEventListener("click", getUnsuccessfulExample);
-      }
+      document.getElementById("refresh-btn").addEventListener("click", loadNetworks);
 
       // Initialize
       checkApiStatus();
-      loadNetworkList();
+      loadNetworks();
 
-      // Initialize Socket.IO with a small delay to ensure everything is loaded
-      setTimeout(function () {
-        console.log("DEBUG: About to initialize Socket.IO");
-        initializeSocket();
-      }, 100);
-
-      // Refresh API status periodically
+      // Auto-refresh every 10 seconds
       setInterval(checkApiStatus, 10000);
+      setInterval(loadNetworks, 30000);
     </script>
   </body>
 </html>
