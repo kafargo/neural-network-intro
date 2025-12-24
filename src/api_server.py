@@ -209,12 +209,17 @@ def list_networks():
         for nid, info in active_networks.items()
     ]
     
+    # Get saved networks, but exclude ones already in memory to avoid duplicates
+    in_memory_ids = set(active_networks.keys())
     saved = list_saved_networks()
+    saved_not_in_memory = []
     for net in saved:
-        net['status'] = 'saved'
-    
+        if net['network_id'] not in in_memory_ids:
+            net['status'] = 'saved'
+            saved_not_in_memory.append(net)
+
     return jsonify({
-        'networks': in_memory + saved
+        'networks': in_memory + saved_not_in_memory
     })
 
 @app.route('/api/networks/<network_id>', methods=['DELETE'])
