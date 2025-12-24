@@ -1,35 +1,28 @@
 # Neural Network Backend System
 
-This project is a backend system for creating, training, and using neural networks. The system allows a frontend application to:
+A clean, focused backend API for creating and training neural networks on MNIST digit recognition. Built with Flask and Flask-SocketIO to provide real-time training updates to frontend applications.
 
-1. Create a neural network with a customizable architecture
-2. Train the network with a specified number of epochs and parameters
-3. Test the network on MNIST data
-4. Visualize the network structure and results
+## Features
+
+This system allows frontend applications to:
+
+1. **Create** neural networks with customizable architectures
+2. **Train** networks with configurable parameters (epochs, batch size, learning rate)
+3. **Monitor** training progress in real-time via WebSocket updates
+4. **Test** networks with successful and unsuccessful example predictions
+5. **Manage** networks (list, delete, automatic persistence)
 
 ## Architecture
 
 The system consists of:
 
-- **Flask API Server**: Handles requests from frontend applications
-- **Neural Network Module**: Implements the neural network functionality
-- **Model Persistence**: Allows saving and loading trained networks
-- **Web Interface**: Simple frontend for interacting with the API
+- **Flask API Server** (`api_server.py`): RESTful HTTP endpoints + WebSocket support
+- **Neural Network Module** (`network.py`): Core backpropagation implementation
+- **MNIST Loader** (`mnist_loader.py`): Handles MNIST dataset loading
+- **Model Persistence** (`model_persistence.py`): Automatic save/load of trained networks
+- **Simple Landing Page** (`static/index.html`): Basic network management interface
 
 ## Getting Started
-
-### Accessing the Server
-
-The server is configured to run on all network interfaces (`0.0.0.0`), which means you can access it:
-
-- From the same machine using: `http://localhost:8000/`
-- From other devices on the same network using: `http://<your-machine-ip>:8000/`
-
-You can run `./access_info.sh` to see all available ways to access your server.
-
-> **Note**: If you're having trouble accessing the server from another device, check your firewall settings to ensure port 8000 is allowed.
-
-> **Note for macOS users**: We're using port 8000 instead of 5000 because port 5000 is commonly used by AirPlay Receiver on macOS.
 
 ### Prerequisites
 
@@ -39,114 +32,250 @@ You can run `./access_info.sh` to see all available ways to access your server.
 ### Installation
 
 1. Clone this repository:
-
-```
+```bash
 git clone https://github.com/yourusername/neural-network-backend.git
 cd neural-network-backend
 ```
 
-2. Run the server script:
-
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
 ```
-./run_server.sh
+
+3. Start the server:
+```bash
+python src/api_server.py
 ```
 
-This will:
+The server will start on **port 8000** and be accessible at:
+- Local: `http://localhost:8000/`
+- Network: `http://<your-machine-ip>:8000/`
 
-- Create a virtual environment (if it doesn't exist)
-- Install required packages
-- Start the API server on port 5000
+> **Note**: Port 8000 is used instead of 5000 because port 5000 is commonly used by AirPlay Receiver on macOS.
 
-### Usage
+### Quick Test
 
-Once the server is running, you can:
+Once running, test the API:
+```bash
+# Check server status
+curl http://localhost:8000/api/status
 
-1. Access the web interface at http://localhost:5000/
-2. Use the API directly for custom frontend development
+# Or run the comprehensive test suite
+python test_api.py
+```
+
+### Access the Management Interface
+
+Visit `http://localhost:8000/` in your browser to see the simple network management page where you can:
+- View all created networks
+- See training status and accuracy
+- Delete networks
 
 ## API Endpoints
 
-The following API endpoints are available:
+### Core Endpoints
 
-### Network Management
+#### Status & Health
+- **GET /api/status**  
+  Check if the API is running and get basic statistics
+  
+#### Network Management
+- **POST /api/networks**  
+  Create a new neural network with specified architecture  
+  Body: `{"layer_sizes": [784, 30, 10]}`
+  
+- **GET /api/networks**  
+  List all available networks (both in-memory and saved)
+  
+- **DELETE /api/networks/{network_id}**  
+  Delete a network from both memory and disk
 
-- `GET /api/status`: Get server status
-- `POST /api/networks`: Create a new neural network
-- `GET /api/networks`: List all available networks
-- `DELETE /api/networks/{network_id}`: Delete a network
-- `POST /api/networks/{network_id}/load`: Load a saved network into memory
+#### Training
+- **POST /api/networks/{network_id}/train**  
+  Start asynchronous training for a network  
+  Body: `{"epochs": 30, "mini_batch_size": 10, "learning_rate": 3.0}`
+  
+- **GET /api/training/{job_id}**  
+  Get the status of a training job
 
-### Training
+#### Testing & Examples
+- **GET /api/networks/{network_id}/successful_example**  
+  Get a random example that the network predicted correctly  
+  Returns: digit image (base64), prediction, actual label, network outputs
+  
+- **GET /api/networks/{network_id}/unsuccessful_example**  
+  Get a random example that the network predicted incorrectly  
+  Returns: digit image (base64), prediction, actual label, network outputs
 
-- `POST /api/networks/{network_id}/train`: Start training a network
-- `GET /api/training/{job_id}`: Check training status
+### WebSocket Events
 
-### Testing and Visualization
+#### Real-Time Training Updates
+Connect to the WebSocket server to receive live training progress:
 
-- `POST /api/networks/{network_id}/predict`: Run prediction on a single example
-- `POST /api/networks/{network_id}/predict_batch`: Run predictions on multiple examples
-- `GET /api/networks/{network_id}/misclassified`: Find misclassified examples
-- `GET /api/networks/{network_id}/visualize`: Get network visualization
-- `GET /api/networks/{network_id}/stats`: Get network statistics
-- `GET /api/networks/{network_id}/successful_example`: Get a random successful prediction with visualization and output weights
-- `GET /api/networks/{network_id}/unsuccessful_example`: Get a random unsuccessful prediction with visualization and output weights
+```javascript
+const socket = io('http://localhost:8000');
+
+socket.on('training_update', (data) => {
+  console.log(`Epoch ${data.epoch}/${data.total_epochs}`);
+  console.log(`Accuracy: ${(data.accuracy * 100).toFixed(2)}%`);
+  console.log(`Progress: ${data.progress}%`);
+});
+```
+
+Event payload includes:
+- `job_id`: Training job identifier
+- `network_id`: Network being trained
+- `epoch`: Current epoch number
+- `total_epochs`: Total epochs to train
+- `accuracy`: Current test accuracy (0-1)
+- `progress`: Percentage complete (0-100)
+- `elapsed_time`: Seconds elapsed
+- `correct`: Number of correct predictions
+- `total`: Total test examples
 
 ## Troubleshooting
 
 ### Connection Issues
 
-If you're experiencing connection issues to the server:
+**Port Conflicts (macOS)**  
+We use port 8000 by default. If you see port conflicts:
+- Port 5000 is used by AirPlay Receiver on macOS
+- You can disable it: `System Settings → AirDrop & Handoff → Turn off AirPlay Receiver`
 
-1. **Port 5000 conflicts (macOS)**: We now use port 8000 by default because port 5000 is used by AirPlay Receiver on macOS.
+**"Access denied" or Connection Refused**
+- Ensure the server is running: `curl http://localhost:8000/api/status`
+- If accessing from another device, use `http://<your-machine-ip>:8000`
+- Check that your firewall allows connections on port 8000
 
-   - If you still see port conflicts, try: `System Settings → AirDrop & Handoff → Turn off AirPlay Receiver`.
+**CORS Issues**
+- The server has CORS enabled for all origins (`*`)
+- If issues persist, check browser console for specific errors
 
-2. **"Access to localhost was denied" error**:
+### Server Management
 
-   - Ensure you're accessing the server using the correct hostname/IP and port (8000)
-   - If accessing from another device, use `http://<your-machine-ip>:8000` instead of `localhost`
-   - Check that the server is running and listening on all interfaces (`0.0.0.0`)
-   - Verify that your firewall is not blocking connections
+**Check if server is running:**
+```bash
+curl http://localhost:8000/api/status
+```
 
-3. **Cross-Origin Issues**:
+**Test all endpoints:**
+```bash
+python test_api.py
+```
 
-   - The server has CORS (Cross-Origin Resource Sharing) enabled
-   - If you're still seeing CORS errors, ensure your browser accepts connections from your server
-
-4. **Viewing Available Connection Options**:
-   Run: `./access_info.sh` to see all available IP addresses and connection URLs
-
-### Server Administration
-
-1. **Starting the server with fixed imports**:
-
-   - Use `./fix_and_run.sh` to correctly configure imports and run the server
-
-2. **Checking if the server is running**:
-   - `curl http://localhost:8000/api/status` should return a JSON response
-3. **Testing the API**:
-   - Use `./test_api.sh` to test all main API endpoints
-   - Use `./test_new_endpoints.sh` to test the example endpoints
+**Kill stuck server process:**
+```bash
+pkill -f 'python src/api_server.py'
+```
 
 ## Frontend Integration
 
-To integrate with your own frontend application:
+### HTTP API Integration
 
-1. Make HTTP requests to the API endpoints above
-2. Process the JSON responses according to your application's needs
-
-Example code for creating a network:
+Example code for creating and training a network:
 
 ```javascript
+// Create a network
 async function createNetwork(layerSizes) {
-  const response = await fetch("http://localhost:5000/api/networks", {
+  const response = await fetch("http://localhost:8000/api/networks", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ layer_sizes: layerSizes }),
   });
   return await response.json();
 }
+
+// Start training
+async function trainNetwork(networkId, epochs = 30) {
+  const response = await fetch(
+    `http://localhost:8000/api/networks/${networkId}/train`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        epochs: epochs,
+        mini_batch_size: 10,
+        learning_rate: 3.0,
+      }),
+    }
+  );
+  return await response.json();
+}
 ```
+
+### WebSocket Integration
+
+Connect to receive real-time training updates:
+
+```javascript
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:8000");
+
+// Listen for training updates
+socket.on("training_update", (data) => {
+  console.log(`Epoch ${data.epoch}/${data.total_epochs}`);
+  console.log(`Accuracy: ${(data.accuracy * 100).toFixed(2)}%`);
+  updateProgressBar(data.progress);
+});
+
+// Handle connection events
+socket.on("connect", () => console.log("Connected to server"));
+socket.on("disconnect", () => console.log("Disconnected from server"));
+```
+
+### Example: Full Training Flow
+
+```javascript
+async function trainWithUpdates() {
+  // 1. Create network
+  const network = await createNetwork([784, 128, 10]);
+  console.log("Network created:", network.network_id);
+
+  // 2. Connect WebSocket
+  const socket = io("http://localhost:8000");
+
+  // 3. Listen for updates
+  socket.on("training_update", (data) => {
+    if (data.network_id === network.network_id) {
+      console.log(`Progress: ${data.progress.toFixed(1)}%`);
+      console.log(`Accuracy: ${(data.accuracy * 100).toFixed(2)}%`);
+    }
+  });
+
+  // 4. Start training
+  const job = await trainNetwork(network.network_id, 30);
+  console.log("Training started:", job.job_id);
+}
+```
+
+## Project Structure
+
+```
+neural-networks-and-deep-learning/
+├── src/
+│   ├── api_server.py          # Main Flask + SocketIO server
+│   ├── network.py              # Neural network implementation
+│   ├── mnist_loader.py         # MNIST data loader
+│   ├── model_persistence.py    # Save/load networks
+│   └── static/
+│       ├── index.html          # Simple management UI
+│       ├── socket.io.js        # WebSocket client (readable)
+│       └── socket.io.min.js    # WebSocket client (minified)
+├── models/                     # Saved trained networks
+├── data/
+│   └── mnist.pkl.gz           # MNIST dataset
+├── test_api.py                 # Automated API test suite
+├── requirements.txt            # Python dependencies
+└── README.md                   # This file
+```
+
+## Documentation
+
+- **ENDPOINTS_REFERENCE.md** - Complete API documentation with examples
+- **CLEANUP_SUMMARY.md** - Recent project cleanup details
+- **QUICK_START.md** - Quick start guide
+- **SOCKETIO_UPDATE.md** - WebSocket library information
 
 ## Original Project
 
