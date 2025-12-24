@@ -27,12 +27,6 @@ try:
     # Try direct imports first (when running as a module)
     from src import network
     from src import mnist_loader
-    from src.visualization_helpers import (
-        visualize_network_structure,
-        run_specific_examples,
-        find_misclassified_examples,
-        display_digit
-    )
     from src.model_persistence import (
         save_network,
         load_network,
@@ -43,12 +37,6 @@ except ImportError:
     # Fall back to relative imports (when running directly)
     import network
     import mnist_loader
-    from visualization_helpers import (
-        visualize_network_structure,
-        run_specific_examples,
-        find_misclassified_examples,
-        display_digit
-    )
     from model_persistence import (
         save_network,
         load_network,
@@ -206,151 +194,6 @@ def get_training_status(job_id):
     
     return jsonify(training_jobs[job_id])
 
-@app.route('/api/networks/<network_id>/predict', methods=['POST'])
-def predict(network_id):
-    """Run prediction on a specific example"""
-    if network_id not in active_networks:
-        return jsonify({'error': 'Network not found'}), 404
-    
-    data = request.get_json()
-    example_index = data.get('example_index', 0)
-    
-    if example_index >= len(test_data):
-        return jsonify({'error': 'Example index out of range'}), 400
-        
-    net = active_networks[network_id]['network']
-    
-    x, y = test_data[example_index]
-    output = net.feedforward(x)
-    predicted_digit = int(np.argmax(output))
-    actual_digit = int(y)
-    
-    # Convert numpy arrays to list for JSON serialization
-    output_list = [float(val) for val in output]
-    
-    return jsonify({
-        'example_index': example_index,
-        'predicted_digit': predicted_digit,
-        'actual_digit': actual_digit,
-        'confidence_scores': output_list,
-        'correct': predicted_digit == actual_digit
-    })
-
-@app.route('/api/networks/<network_id>/predict_batch', methods=['POST'])
-def predict_batch(network_id):
-    """Run prediction on a batch of examples"""
-    if network_id not in active_networks:
-        return jsonify({'error': 'Network not found'}), 404
-    
-    data = request.get_json()
-    start_index = data.get('start_index', 0)
-    count = data.get('count', 10)
-    
-    if start_index >= len(test_data):
-        return jsonify({'error': 'Start index out of range'}), 400
-    
-    end_index = min(start_index + count, len(test_data))
-    
-    net = active_networks[network_id]['network']
-    
-    results = []
-    for i in range(start_index, end_index):
-        x, y = test_data[i]
-        output = net.feedforward(x)
-        predicted_digit = int(np.argmax(output))
-        actual_digit = int(y)
-        
-        # Convert image data to base64 for sending to frontend
-        plt.figure(figsize=(2, 2))
-        plt.imshow(x.reshape(28, 28), cmap='gray')
-        plt.axis('off')
-        buffer = BytesIO()
-        plt.savefig(buffer, format='png')
-        buffer.seek(0)
-        img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        plt.close()
-        
-        results.append({
-            'example_index': i,
-            'predicted_digit': predicted_digit,
-            'actual_digit': actual_digit,
-            'correct': predicted_digit == actual_digit,
-            'image_data': img_base64
-        })
-    
-    return jsonify({
-        'results': results,
-        'total': end_index - start_index
-    })
-
-@app.route('/api/networks/<network_id>/visualize', methods=['GET'])
-def get_visualization(network_id):
-    """Return a visualization of the network structure"""
-    if network_id not in active_networks:
-        return jsonify({'error': 'Network not found'}), 404
-        
-    net = active_networks[network_id]['network']
-    
-    # Create visualization in memory
-    plt.figure(figsize=(12, 8))
-    visualize_network_structure(net, display=False)
-    
-    # Save to in-memory bytes buffer
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    
-    # Encode as base64 for easy frontend display
-    img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    plt.close()
-    
-    return jsonify({
-        'network_id': network_id,
-        'visualization': img_base64
-    })
-
-@app.route('/api/networks/<network_id>/misclassified', methods=['GET'])
-def get_misclassified(network_id):
-    """Find misclassified examples"""
-    if network_id not in active_networks:
-        return jsonify({'error': 'Network not found'}), 404
-    
-    max_count = request.args.get('max_count', default=10, type=int)
-    max_check = request.args.get('max_check', default=500, type=int)
-        
-    net = active_networks[network_id]['network']
-    
-    # Find misclassified examples
-    misclassified = find_misclassified_examples(net, test_data, max_count=max_count, max_check=max_check)
-    
-    results = []
-    for idx in misclassified:
-        x, y = test_data[idx]
-        output = net.feedforward(x)
-        predicted_digit = int(np.argmax(output))
-        actual_digit = int(y)
-        
-        # Convert image data to base64 for sending to frontend
-        plt.figure(figsize=(2, 2))
-        plt.imshow(x.reshape(28, 28), cmap='gray')
-        plt.axis('off')
-        buffer = BytesIO()
-        plt.savefig(buffer, format='png')
-        buffer.seek(0)
-        img_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        plt.close()
-        
-        results.append({
-            'example_index': idx,
-            'predicted_digit': predicted_digit,
-            'actual_digit': actual_digit,
-            'image_data': img_base64
-        })
-    
-    return jsonify({
-        'misclassified': results
-    })
-
 @app.route('/api/networks', methods=['GET'])
 def list_networks():
     """List all available networks"""
@@ -374,35 +217,6 @@ def list_networks():
         'networks': in_memory + saved
     })
 
-@app.route('/api/networks/<network_id>/load', methods=['POST'])
-def load_saved_network(network_id):
-    """Load a saved network into memory"""
-    # Check if already in memory
-    if network_id in active_networks:
-        return jsonify({
-            'network_id': network_id,
-            'status': 'already_loaded'
-        })
-    
-    # Try to load from disk
-    net = load_network(network_id)
-    if net is None:
-        return jsonify({'error': 'Saved network not found'}), 404
-    
-    # Add to active networks
-    active_networks[network_id] = {
-        'network': net,
-        'architecture': net.sizes,
-        'trained': True,
-        'accuracy': None  # Will need to evaluate to get this
-    }
-    
-    return jsonify({
-        'network_id': network_id,
-        'architecture': net.sizes,
-        'status': 'loaded'
-    })
-
 @app.route('/api/networks/<network_id>', methods=['DELETE'])
 def delete_network_endpoint(network_id):
     """Delete a network (both from memory and disk)"""
@@ -424,52 +238,6 @@ def delete_network_endpoint(network_id):
         'deleted_from_disk': deleted_from_disk
     })
 
-@app.route('/api/networks/<network_id>/stats', methods=['GET'])
-def get_network_stats(network_id):
-    """Get statistical information about a network"""
-    if network_id not in active_networks:
-        return jsonify({'error': 'Network not found'}), 404
-        
-    net = active_networks[network_id]['network']
-    
-    # Evaluate network on test data if not already done
-    if active_networks[network_id]['accuracy'] is None and active_networks[network_id]['trained']:
-        accuracy = net.evaluate(test_data) / len(test_data)
-        active_networks[network_id]['accuracy'] = accuracy
-    else:
-        accuracy = active_networks[network_id]['accuracy']
-    
-    # Get weight and bias statistics
-    weight_stats = []
-    for i, w in enumerate(net.weights):
-        weight_stats.append({
-            'layer': i + 1,
-            'mean': float(np.mean(w)),
-            'min': float(np.min(w)),
-            'max': float(np.max(w)),
-            'std': float(np.std(w)),
-            'shape': list(w.shape)
-        })
-    
-    bias_stats = []
-    for i, b in enumerate(net.biases):
-        bias_stats.append({
-            'layer': i + 1,
-            'mean': float(np.mean(b)),
-            'min': float(np.min(b)),
-            'max': float(np.max(b)),
-            'std': float(np.std(b)),
-            'shape': list(b.shape)
-        })
-    
-    return jsonify({
-        'network_id': network_id,
-        'architecture': net.sizes,
-        'trained': active_networks[network_id]['trained'],
-        'accuracy': accuracy,
-        'weight_stats': weight_stats,
-        'bias_stats': bias_stats
-    })
 
 @app.route('/api/networks/<network_id>/successful_example', methods=['GET'])
 def get_successful_example(network_id):
