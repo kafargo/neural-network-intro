@@ -178,9 +178,9 @@ def train_network_task(network_id, job_id, epochs, mini_batch_size, learning_rat
         training_jobs[job_id]['status'] = 'completed'
         training_jobs[job_id]['accuracy'] = accuracy
         
-        # Save the trained network
-        save_network(net, network_id)
-        
+        # Save the trained network with metadata
+        save_network(net, network_id, trained=True, accuracy=accuracy)
+
     except Exception as e:
         # Update job status on error
         training_jobs[job_id]['status'] = 'failed'
@@ -241,6 +241,41 @@ def delete_network_endpoint(network_id):
         'network_id': network_id,
         'deleted_from_memory': deleted_from_memory,
         'deleted_from_disk': deleted_from_disk
+    })
+
+@app.route('/api/networks', methods=['DELETE'])
+def delete_all_networks():
+    """Delete all networks (both from memory and disk)"""
+    # Get all network IDs (in-memory and saved)
+    in_memory_ids = list(active_networks.keys())
+    saved_networks = list_saved_networks()
+    saved_ids = [net['network_id'] for net in saved_networks]
+
+    # Combine and deduplicate
+    all_network_ids = list(set(in_memory_ids + saved_ids))
+
+    deleted_count = 0
+    deleted_from_memory_count = 0
+    deleted_from_disk_count = 0
+
+    # Delete each network
+    for network_id in all_network_ids:
+        # Remove from active networks if present
+        if network_id in active_networks:
+            del active_networks[network_id]
+            deleted_from_memory_count += 1
+
+        # Delete from disk if present
+        if delete_network(network_id):
+            deleted_from_disk_count += 1
+
+        deleted_count += 1
+
+    return jsonify({
+        'deleted_count': deleted_count,
+        'deleted_from_memory': deleted_from_memory_count,
+        'deleted_from_disk': deleted_from_disk_count,
+        'message': f'Successfully deleted {deleted_count} network(s)'
     })
 
 

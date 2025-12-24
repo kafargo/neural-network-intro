@@ -18,7 +18,7 @@ class NetworkEncoder(json.JSONEncoder):
             return obj.tolist()
         return super().default(obj)
 
-def save_network(network, network_id, model_dir='models'):
+def save_network(network, network_id, model_dir='models', trained=True, accuracy=None):
     """
     Save a trained network to disk
     
@@ -26,7 +26,9 @@ def save_network(network, network_id, model_dir='models'):
         network: The neural network object to save
         network_id: A unique identifier for the network
         model_dir: Directory to save the model in
-        
+        trained: Boolean indicating if the network has been trained
+        accuracy: The accuracy of the trained network (0.0 to 1.0)
+
     Returns:
         bool: True if the save was successful
     """
@@ -37,12 +39,14 @@ def save_network(network, network_id, model_dir='models'):
     with open(f"{model_dir}/{network_id}.pkl", 'wb') as f:
         pickle.dump(network, f)
     
-    # Save network metadata
+    # Save network metadata including trained status and accuracy
     metadata = {
         'network_id': network_id,
         'architecture': network.sizes,
         'weights_shape': [w.shape for w in network.weights],
-        'biases_shape': [b.shape for b in network.biases]
+        'biases_shape': [b.shape for b in network.biases],
+        'trained': trained,
+        'accuracy': accuracy
     }
     
     with open(f"{model_dir}/{network_id}.json", 'w') as f:
@@ -90,6 +94,14 @@ def list_saved_networks(model_dir='models'):
             network_id = filename.split('.')[0]
             with open(f"{model_dir}/{filename}", 'r') as f:
                 metadata = json.load(f)
+
+            # Ensure backwards compatibility: add trained and accuracy if not present
+            if 'trained' not in metadata:
+                # If a network was saved, it was trained (old behavior)
+                metadata['trained'] = True
+            if 'accuracy' not in metadata:
+                metadata['accuracy'] = None
+
             networks.append(metadata)
     
     return networks

@@ -134,6 +134,27 @@ Delete a network (from both memory and disk if it exists).
 }
 ```
 
+#### Delete All Networks
+
+```
+DELETE /api/networks
+```
+
+Delete all networks (from both memory and disk).
+
+**Response**
+
+```json
+{
+  "deleted_count": 5,
+  "deleted_from_memory": 3,
+  "deleted_from_disk": 5,
+  "message": "Successfully deleted 5 network(s)"
+}
+```
+
+**Note**: This is a destructive operation that cannot be undone. All trained networks will be permanently deleted.
+
 #### Get Network Statistics
 
 ```

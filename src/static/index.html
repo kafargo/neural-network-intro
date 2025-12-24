@@ -145,6 +145,20 @@
         background-color: #d32f2f;
       }
 
+      .btn-delete-all {
+        background-color: #ff5722;
+        margin-left: 10px;
+      }
+
+      .btn-delete-all:hover {
+        background-color: #e64a19;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+      }
+
       .network-list {
         list-style: none;
       }
@@ -296,7 +310,10 @@
       <div class="networks-panel">
         <div class="panel-header">
           <h2>Networks</h2>
-          <button class="btn" id="refresh-btn">Refresh</button>
+          <div class="button-group">
+            <button class="btn" id="refresh-btn">Refresh</button>
+            <button class="btn btn-delete-all" id="delete-all-btn">Delete All</button>
+          </div>
         </div>
 
         <div id="message-container"></div>
@@ -439,8 +456,32 @@
         }
       }
 
+      // Delete All Networks
+      async function deleteAllNetworks() {
+        if (!confirm('⚠️ Are you sure you want to delete ALL networks? This action cannot be undone!')) {
+          return;
+        }
+
+        try {
+          const response = await fetch(`${API_BASE_URL}/networks`, {
+            method: 'DELETE'
+          });
+
+          if (!response.ok) throw new Error("Failed to delete all networks");
+
+          const data = await response.json();
+          showMessage(`${data.message}`, 'success');
+          loadNetworks();
+          checkApiStatus();
+        } catch (error) {
+          showMessage(`Error deleting all networks: ${error.message}`, 'error');
+          console.error("Delete All Networks Error:", error);
+        }
+      }
+
       // Event Listeners
       document.getElementById("refresh-btn").addEventListener("click", loadNetworks);
+      document.getElementById("delete-all-btn").addEventListener("click", deleteAllNetworks);
 
       // Initialize
       checkApiStatus();
