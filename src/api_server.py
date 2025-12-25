@@ -15,7 +15,6 @@ import uuid
 import json
 import base64
 from io import BytesIO
-import threading
 # Set matplotlib to use non-interactive backend before importing pyplot
 import matplotlib
 matplotlib.use('Agg')  # Use the Agg backend which doesn't require a display
@@ -47,7 +46,7 @@ except ImportError:
 # Initialize Flask app
 app = Flask(__name__, static_folder='static')
 CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for all routes and all origins
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet', logger=True, engineio_logger=True)
 
 # Store active networks in memory
 active_networks = {}
@@ -123,13 +122,12 @@ def train_network(network_id):
         'epochs': epochs
     }
     
-    # Start training in a separate thread
-    thread = threading.Thread(
-        target=train_network_task,
-        args=(network_id, job_id, epochs, mini_batch_size, learning_rate)
+    # Start training in a background task (compatible with eventlet)
+    socketio.start_background_task(
+        train_network_task,
+        network_id, job_id, epochs, mini_batch_size, learning_rate
     )
-    thread.start()
-    
+
     return jsonify({
         'job_id': job_id,
         'network_id': network_id,
