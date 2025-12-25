@@ -70,6 +70,7 @@ class Network(object):
             # Calculate accuracy and elapsed time
             elapsed = time2 - time1
             accuracy = None
+            correct = None
             if test_data:
                 correct = self.evaluate(test_data)
                 accuracy = correct / n_test
@@ -87,7 +88,7 @@ class Network(object):
                     'accuracy': accuracy
                 }
                 if test_data:
-                    callback_data['correct'] = int(self.evaluate(test_data))
+                    callback_data['correct'] = int(correct)
                     callback_data['total'] = n_test
                 callback(callback_data)
 

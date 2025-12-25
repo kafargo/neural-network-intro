@@ -177,14 +177,32 @@ def train_network_task(network_id, job_id, epochs, mini_batch_size, learning_rat
         # Update job status
         training_jobs[job_id]['status'] = 'completed'
         training_jobs[job_id]['accuracy'] = accuracy
-        
+        training_jobs[job_id]['progress'] = 100
+
         # Save the trained network with metadata
         save_network(net, network_id, trained=True, accuracy=accuracy)
+
+        # Emit completion event via WebSocket
+        socketio.emit('training_complete', {
+            'job_id': job_id,
+            'network_id': network_id,
+            'status': 'completed',
+            'accuracy': float(accuracy),
+            'progress': 100
+        })
 
     except Exception as e:
         # Update job status on error
         training_jobs[job_id]['status'] = 'failed'
         training_jobs[job_id]['error'] = str(e)
+
+        # Emit error event via WebSocket
+        socketio.emit('training_error', {
+            'job_id': job_id,
+            'network_id': network_id,
+            'status': 'failed',
+            'error': str(e)
+        })
 
 @app.route('/api/training/<job_id>', methods=['GET'])
 def get_training_status(job_id):
