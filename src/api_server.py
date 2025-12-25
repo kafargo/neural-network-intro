@@ -15,6 +15,7 @@ import uuid
 import json
 import base64
 from io import BytesIO
+import eventlet
 # Set matplotlib to use non-interactive backend before importing pyplot
 import matplotlib
 matplotlib.use('Agg')  # Use the Agg backend which doesn't require a display
@@ -46,7 +47,15 @@ except ImportError:
 # Initialize Flask app
 app = Flask(__name__, static_folder='static')
 CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for all routes and all origins
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet', logger=True, engineio_logger=True)
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode='eventlet',
+    logger=True,
+    engineio_logger=True,
+    ping_timeout=60,        # 60 seconds before considering connection dead
+    ping_interval=25        # Send ping every 25 seconds to keep connection alive
+)
 
 # Store active networks in memory
 active_networks = {}
@@ -159,7 +168,9 @@ def train_network_task(network_id, job_id, epochs, mini_batch_size, learning_rat
         
         # Emit the progress update through websocket
         socketio.emit('training_update', update_data)
-    
+        # Yield control to eventlet to send the message immediately
+        eventlet.sleep(0)
+
     try:
         # Train the network with the callback function
         net.SGD(training_data, epochs, mini_batch_size, learning_rate, 
@@ -188,6 +199,8 @@ def train_network_task(network_id, job_id, epochs, mini_batch_size, learning_rat
             'accuracy': float(accuracy),
             'progress': 100
         })
+        # Yield control to eventlet to send the message immediately
+        eventlet.sleep(0)
 
     except Exception as e:
         # Update job status on error
@@ -201,6 +214,8 @@ def train_network_task(network_id, job_id, epochs, mini_batch_size, learning_rat
             'status': 'failed',
             'error': str(e)
         })
+        # Yield control to eventlet to send the message immediately
+        eventlet.sleep(0)
 
 @app.route('/api/training/<job_id>', methods=['GET'])
 def get_training_status(job_id):
