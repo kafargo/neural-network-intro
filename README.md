@@ -303,6 +303,12 @@ neural-networks-and-deep-learning/
 │   ├── model_persistence.py    # Save/load networks
 │   └── static/
 │       └── index.html          # Simple management UI
+├── tests/
+│   ├── conftest.py             # Pytest fixtures and configuration
+│   ├── test_network.py         # Neural network unit tests
+│   ├── test_model_persistence.py  # Model persistence tests
+│   ├── test_api.py             # API endpoint tests
+│   └── test_socketio.py        # WebSocket/SocketIO tests
 ├── docs/
 │   ├── API_DOCUMENTATION.md           # Complete REST API docs
 │   ├── WEBSOCKET_API_DOCUMENTATION.md # WebSocket events & Angular guide
@@ -310,11 +316,107 @@ neural-networks-and-deep-learning/
 ├── models/                     # Saved trained networks (created on first save)
 ├── data/
 │   └── mnist.pkl.gz           # MNIST dataset
+├── pytest.ini                  # Pytest configuration
+├── run_tests.py                # Simple test runner script
 ├── Dockerfile                  # Docker container configuration
 ├── docker-compose.yml          # Docker Compose setup
 ├── railway.json                # Railway deployment configuration
 ├── requirements.txt            # Python dependencies
 └── README.md                   # This file
+```
+
+## Testing
+
+This project uses pytest for testing with a clean, Pythonic approach.
+
+### Running Tests
+
+**Install test dependencies:**
+```bash
+pip install -r requirements.txt
+```
+
+**Run all tests:**
+```bash
+pytest
+# or
+python run_tests.py
+```
+
+**Run specific test categories:**
+```bash
+# Unit tests only (fast)
+python run_tests.py unit
+
+# Integration tests only
+python run_tests.py integration
+
+# API tests only
+python run_tests.py api
+
+# All tests except slow ones
+python run_tests.py fast
+```
+
+**Run with coverage report:**
+```bash
+python run_tests.py coverage
+```
+
+This generates an HTML coverage report in `htmlcov/index.html`.
+
+### Test Structure
+
+- **test_network.py** - Unit tests for neural network core functionality
+  - Network initialization and architecture
+  - Feedforward operations
+  - Backpropagation
+  - Training with SGD
+  - Activation functions
+
+- **test_model_persistence.py** - Tests for saving/loading networks
+  - Save and load operations
+  - Metadata handling
+  - Network deletion
+  - Multiple network management
+
+- **test_api.py** - API endpoint tests
+  - Status endpoint
+  - Network CRUD operations
+  - Training endpoints
+  - Example prediction endpoints
+
+- **test_socketio.py** - WebSocket event tests
+  - Real-time training updates
+  - Training completion events
+  - Event data format validation
+
+### Test Markers
+
+Tests are organized with markers for selective running:
+
+- `@pytest.mark.unit` - Fast unit tests
+- `@pytest.mark.integration` - Integration tests
+- `@pytest.mark.api` - API endpoint tests
+- `@pytest.mark.slow` - Tests that take longer to run
+
+### Writing Tests
+
+The test suite uses pytest fixtures defined in `tests/conftest.py`:
+
+- `simple_network` - Small 3-layer network for quick tests
+- `mnist_network` - Full MNIST architecture
+- `flask_client` - Flask test client
+- `socketio_client` - SocketIO test client
+- `temp_model_dir` - Temporary directory for model storage
+
+Example test:
+```python
+@pytest.mark.unit
+def test_network_creation(simple_network):
+    """Test network is created with correct architecture."""
+    assert simple_network.num_layers == 3
+    assert simple_network.sizes == [3, 4, 2]
 ```
 
 ## Documentation
