@@ -368,7 +368,7 @@ def get_successful_example(network_id):
         'actual_digit': successful_example['y'],
         'image_data': img_base64,
         'output_weights': output_weights,
-        'network_output': [float(val) for val in successful_example['output']]
+        'network_output': [float(val.item()) if hasattr(val, 'item') else float(val) for val in successful_example['output']]
     })
 
 @app.route('/api/networks/<network_id>/unsuccessful_example', methods=['GET'])
@@ -430,7 +430,7 @@ def get_unsuccessful_example(network_id):
         'actual_digit': unsuccessful_example['y'],
         'image_data': img_base64,
         'output_weights': output_weights,
-        'network_output': [float(val) for val in unsuccessful_example['output']]
+        'network_output': [float(val.item()) if hasattr(val, 'item') else float(val) for val in unsuccessful_example['output']]
     })
 
 @app.route('/')
