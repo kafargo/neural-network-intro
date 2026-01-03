@@ -98,24 +98,6 @@ List all available networks, both in-memory and saved.
 }
 ```
 
-#### Load Network
-
-```
-POST /api/networks/{network_id}/load
-```
-
-Load a previously saved network into memory.
-
-**Response**
-
-```json
-{
-  "network_id": "550e8400-e29b-41d4-a716-446655440000",
-  "architecture": [784, 30, 10],
-  "status": "loaded"
-}
-```
-
 #### Delete Network
 
 ```
@@ -155,60 +137,6 @@ Delete all networks (from both memory and disk).
 
 **Note**: This is a destructive operation that cannot be undone. All trained networks will be permanently deleted.
 
-#### Get Network Statistics
-
-```
-GET /api/networks/{network_id}/stats
-```
-
-Get statistical information about a network, including accuracy and weight/bias statistics.
-
-**Response**
-
-```json
-{
-  "network_id": "550e8400-e29b-41d4-a716-446655440000",
-  "architecture": [784, 30, 10],
-  "trained": true,
-  "accuracy": 0.946,
-  "weight_stats": [
-    {
-      "layer": 1,
-      "mean": 0.0012,
-      "min": -2.3456,
-      "max": 2.1234,
-      "std": 0.5678,
-      "shape": [30, 784]
-    },
-    {
-      "layer": 2,
-      "mean": -0.0023,
-      "min": -1.5678,
-      "max": 1.6789,
-      "std": 0.4567,
-      "shape": [10, 30]
-    }
-  ],
-  "bias_stats": [
-    {
-      "layer": 1,
-      "mean": 0.1234,
-      "min": -0.9876,
-      "max": 1.2345,
-      "std": 0.3456,
-      "shape": [30, 1]
-    },
-    {
-      "layer": 2,
-      "mean": 0.2345,
-      "min": -0.8765,
-      "max": 0.9876,
-      "std": 0.3456,
-      "shape": [10, 1]
-    }
-  ]
-}
-```
 
 ### Training
 
@@ -224,7 +152,7 @@ Start asynchronous training for the specified network.
 
 ```json
 {
-  "epochs": 10,
+  "epochs": 5,
   "mini_batch_size": 10,
   "learning_rate": 3.0
 }
@@ -257,142 +185,20 @@ Get the status of a training job.
   "network_id": "550e8400-e29b-41d4-a716-446655440000",
   "status": "completed",
   "progress": 100,
-  "epochs": 10,
+  "epochs": 5,
   "accuracy": 0.946
 }
 ```
 
-Possible status values: `pending`, `completed`, `failed`
+Possible status values: `pending`, `training`, `completed`, `failed`
 
-### Predictions
+If status is `failed`, an additional `error` field will be included with the error message.
 
-#### Predict Single Example
+**Note**: For real-time training progress updates, use the WebSocket API instead of polling this endpoint. See the [WebSocket API Documentation](WEBSOCKET_API_DOCUMENTATION.md) for details.
 
-```
-POST /api/networks/{network_id}/predict
-```
-
-Run prediction on a specific example from the test dataset.
-
-**Request Body**
-
-```json
-{
-  "example_index": 42
-}
-```
-
-**Response**
-
-```json
-{
-  "example_index": 42,
-  "predicted_digit": 7,
-  "actual_digit": 7,
-  "confidence_scores": [
-    0.01, 0.02, 0.01, 0.03, 0.02, 0.05, 0.01, 0.87, 0.01, 0.02
-  ],
-  "correct": true
-}
-```
-
-#### Predict Batch
-
-```
-POST /api/networks/{network_id}/predict_batch
-```
-
-Run prediction on a batch of examples from the test dataset.
-
-**Request Body**
-
-```json
-{
-  "start_index": 50,
-  "count": 5
-}
-```
-
-Both parameters are optional. Default `start_index` is 0, default `count` is 10.
-
-**Response**
-
-```json
-{
-  "results": [
-    {
-      "example_index": 50,
-      "predicted_digit": 9,
-      "actual_digit": 9,
-      "correct": true,
-      "image_data": "data:image/png;base64,..."
-    },
-    {
-      "example_index": 51,
-      "predicted_digit": 2,
-      "actual_digit": 2,
-      "correct": true,
-      "image_data": "data:image/png;base64,..."
-    }
-    // ... more results
-  ],
-  "total": 5
-}
-```
 
 ### Visualizations
 
-#### Network Visualization
-
-```
-GET /api/networks/{network_id}/visualize
-```
-
-Get a visual representation of the network structure.
-
-**Response**
-
-```json
-{
-  "network_id": "550e8400-e29b-41d4-a716-446655440000",
-  "visualization": "data:image/png;base64,..."
-}
-```
-
-#### Get Misclassified Examples
-
-```
-GET /api/networks/{network_id}/misclassified?max_count=5&max_check=200
-```
-
-Find misclassified examples from the test dataset.
-
-**Query Parameters**
-
-- `max_count`: Maximum number of misclassifications to return (default: 10)
-- `max_check`: Maximum number of examples to check (default: 500)
-
-**Response**
-
-```json
-{
-  "misclassified": [
-    {
-      "example_index": 123,
-      "predicted_digit": 7,
-      "actual_digit": 1,
-      "image_data": "data:image/png;base64,..."
-    },
-    {
-      "example_index": 456,
-      "predicted_digit": 9,
-      "actual_digit": 4,
-      "image_data": "data:image/png;base64,..."
-    }
-    // ... more examples
-  ]
-}
-```
 
 #### Get Successful Example
 
@@ -410,11 +216,13 @@ Return a random successful example prediction with network output details.
   "example_index": 789,
   "predicted_digit": 5,
   "actual_digit": 5,
-  "image_data": "data:image/png;base64,...",
-  "output_weights": [...],
+  "image_data": "iVBORw0KGgoAAAANSUhEUgAA...(base64 encoded PNG image)",
+  "output_weights": [[0.1, -0.2, ...], ...],
   "network_output": [0.01, 0.02, 0.01, 0.03, 0.02, 0.85, 0.01, 0.02, 0.01, 0.02]
 }
 ```
+
+**Note**: `image_data` is a base64-encoded PNG image (without the `data:image/png;base64,` prefix). To use in HTML, prepend `data:image/png;base64,` to the value.
 
 #### Get Unsuccessful Example
 
@@ -432,11 +240,13 @@ Return a random unsuccessful example prediction with network output details.
   "example_index": 123,
   "predicted_digit": 7,
   "actual_digit": 1,
-  "image_data": "data:image/png;base64,...",
-  "output_weights": [...],
+  "image_data": "iVBORw0KGgoAAAANSUhEUgAA...(base64 encoded PNG image)",
+  "output_weights": [[0.1, -0.2, ...], ...],
   "network_output": [0.05, 0.15, 0.01, 0.03, 0.02, 0.05, 0.01, 0.62, 0.01, 0.05]
 }
 ```
+
+**Note**: `image_data` is a base64-encoded PNG image (without the `data:image/png;base64,` prefix). To use in HTML, prepend `data:image/png;base64,` to the value.
 
 ## Using with Angular
 
@@ -475,7 +285,7 @@ export class NeuralNetworkService {
   // Train a network
   trainNetwork(
     networkId: string,
-    epochs: number = 10,
+    epochs: number = 5,
     miniBatchSize: number = 10,
     learningRate: number = 3.0
   ): Observable<any> {
@@ -491,30 +301,25 @@ export class NeuralNetworkService {
     return this.http.get(`${this.apiUrl}/training/${jobId}`);
   }
 
-  // Predict a single example
-  predict(networkId: string, exampleIndex: number): Observable<any> {
-    return this.http.post(`${this.apiUrl}/networks/${networkId}/predict`, {
-      example_index: exampleIndex,
-    });
+  // Delete a network
+  deleteNetwork(networkId: string): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/networks/${networkId}`);
   }
 
-  // Get network visualization
-  getVisualization(networkId: string): Observable<any> {
-    return this.http.get(`${this.apiUrl}/networks/${networkId}/visualize`);
+  // Delete all networks
+  deleteAllNetworks(): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/networks`);
   }
 
-  // Get misclassified examples
-  getMisclassifiedExamples(
-    networkId: string,
-    maxCount: number = 10,
-    maxCheck: number = 500
-  ): Observable<any> {
-    return this.http.get(
-      `${this.apiUrl}/networks/${networkId}/misclassified?max_count=${maxCount}&max_check=${maxCheck}`
-    );
+  // Get a successful example
+  getSuccessfulExample(networkId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/networks/${networkId}/successful_example`);
   }
 
-  // More methods for other endpoints...
+  // Get an unsuccessful example
+  getUnsuccessfulExample(networkId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/networks/${networkId}/unsuccessful_example`);
+  }
 }
 ```
 

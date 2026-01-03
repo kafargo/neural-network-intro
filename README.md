@@ -33,8 +33,8 @@ The system consists of:
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/yourusername/neural-network-backend.git
-cd neural-network-backend
+git clone https://github.com/yourusername/neural-networks-and-deep-learning.git
+cd neural-networks-and-deep-learning
 ```
 
 2. Install dependencies:
@@ -60,8 +60,10 @@ Once running, test the API:
 # Check server status
 curl http://localhost:8000/api/status
 
-# Or run the comprehensive test suite
-python test_api.py
+# Create a test network
+curl -X POST http://localhost:8000/api/networks \
+  -H "Content-Type: application/json" \
+  -d '{"layer_sizes": [784, 30, 10]}'
 ```
 
 ### Access the Management Interface
@@ -88,12 +90,15 @@ Visit `http://localhost:8000/` in your browser to see the simple network managem
   List all available networks (both in-memory and saved)
   
 - **DELETE /api/networks/{network_id}**  
-  Delete a network from both memory and disk
+  Delete a specific network from both memory and disk
+
+- **DELETE /api/networks**  
+  Delete all networks (both in-memory and saved)
 
 #### Training
 - **POST /api/networks/{network_id}/train**  
   Start asynchronous training for a network  
-  Body: `{"epochs": 30, "mini_batch_size": 10, "learning_rate": 3.0}`
+  Body: `{"epochs": 5, "mini_batch_size": 10, "learning_rate": 3.0}` (defaults shown)
   
 - **GET /api/training/{job_id}**  
   Get the status of a training job
@@ -120,9 +125,23 @@ socket.on('training_update', (data) => {
   console.log(`Accuracy: ${(data.accuracy * 100).toFixed(2)}%`);
   console.log(`Progress: ${data.progress}%`);
 });
+
+socket.on('training_complete', (data) => {
+  console.log('Training completed!');
+  console.log(`Final accuracy: ${(data.accuracy * 100).toFixed(2)}%`);
+});
+
+socket.on('training_error', (data) => {
+  console.error('Training failed:', data.error);
+});
 ```
 
-Event payload includes:
+**Available Events:**
+- `training_update` - Emitted after each epoch with progress data
+- `training_complete` - Emitted when training finishes successfully
+- `training_error` - Emitted if training fails with error details
+
+**Event payload for `training_update` includes:**
 - `job_id`: Training job identifier
 - `network_id`: Network being trained
 - `epoch`: Current epoch number
@@ -158,9 +177,9 @@ We use port 8000 by default. If you see port conflicts:
 curl http://localhost:8000/api/status
 ```
 
-**Test all endpoints:**
+**List all networks:**
 ```bash
-python test_api.py
+curl http://localhost:8000/api/networks
 ```
 
 **Kill stuck server process:**
@@ -186,7 +205,7 @@ async function createNetwork(layerSizes) {
 }
 
 // Start training
-async function trainNetwork(networkId, epochs = 30) {
+async function trainNetwork(networkId, epochs = 5) {
   const response = await fetch(
     `http://localhost:8000/api/networks/${networkId}/train`,
     {
@@ -219,6 +238,17 @@ socket.on("training_update", (data) => {
   updateProgressBar(data.progress);
 });
 
+// Handle training completion
+socket.on("training_complete", (data) => {
+  console.log("Training completed successfully!");
+  console.log(`Final accuracy: ${(data.accuracy * 100).toFixed(2)}%`);
+});
+
+// Handle training errors
+socket.on("training_error", (data) => {
+  console.error("Training failed:", data.error);
+});
+
 // Handle connection events
 socket.on("connect", () => console.log("Connected to server"));
 socket.on("disconnect", () => console.log("Disconnected from server"));
@@ -243,8 +273,21 @@ async function trainWithUpdates() {
     }
   });
 
+  socket.on("training_complete", (data) => {
+    if (data.network_id === network.network_id) {
+      console.log("Training completed!");
+      console.log(`Final accuracy: ${(data.accuracy * 100).toFixed(2)}%`);
+    }
+  });
+
+  socket.on("training_error", (data) => {
+    if (data.network_id === network.network_id) {
+      console.error("Training failed:", data.error);
+    }
+  });
+
   // 4. Start training
-  const job = await trainNetwork(network.network_id, 30);
+  const job = await trainNetwork(network.network_id, 10);
   console.log("Training started:", job.job_id);
 }
 ```
@@ -259,23 +302,28 @@ neural-networks-and-deep-learning/
 │   ├── mnist_loader.py         # MNIST data loader
 │   ├── model_persistence.py    # Save/load networks
 │   └── static/
-│       ├── index.html          # Simple management UI
-│       ├── socket.io.js        # WebSocket client (readable)
-│       └── socket.io.min.js    # WebSocket client (minified)
-├── models/                     # Saved trained networks
+│       └── index.html          # Simple management UI
+├── docs/
+│   ├── API_DOCUMENTATION.md           # Complete REST API docs
+│   ├── WEBSOCKET_API_DOCUMENTATION.md # WebSocket events & Angular guide
+│   └── README_ORIGINAL.md             # Original project documentation
+├── models/                     # Saved trained networks (created on first save)
 ├── data/
 │   └── mnist.pkl.gz           # MNIST dataset
-├── test_api.py                 # Automated API test suite
+├── Dockerfile                  # Docker container configuration
+├── docker-compose.yml          # Docker Compose setup
+├── railway.json                # Railway deployment configuration
 ├── requirements.txt            # Python dependencies
 └── README.md                   # This file
 ```
 
 ## Documentation
 
-- **ENDPOINTS_REFERENCE.md** - Complete API documentation with examples
-- **CLEANUP_SUMMARY.md** - Recent project cleanup details
-- **QUICK_START.md** - Quick start guide
-- **SOCKETIO_UPDATE.md** - WebSocket library information
+For detailed API information, see the `docs/` folder:
+
+- **[docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md)** - Complete REST API documentation with examples
+- **[docs/WEBSOCKET_API_DOCUMENTATION.md](docs/WEBSOCKET_API_DOCUMENTATION.md)** - WebSocket events and Angular integration guide
+- **[docs/README_ORIGINAL.md](docs/README_ORIGINAL.md)** - Original project documentation
 
 ## Original Project
 

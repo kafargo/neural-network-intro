@@ -47,12 +47,66 @@ interface TrainingUpdate {
   "job_id": "a82c53d7-e99d-470d-ae1e-8575e42e1926",
   "network_id": "0d8da319-2268-48f3-b4bf-4a4432815aef",
   "epoch": 1,
-  "total_epochs": 10,
+  "total_epochs": 5,
   "accuracy": 0.8369,
   "elapsed_time": 2.65,
-  "progress": 10.0,
+  "progress": 20.0,
   "correct": 8369,
   "total": 10000
+}
+```
+
+#### `training_complete`
+
+Emitted when training completes successfully.
+
+**Event Data Structure:**
+
+```typescript
+interface TrainingComplete {
+  job_id: string; // Unique identifier for the training job
+  network_id: string; // Unique identifier for the neural network
+  status: "completed"; // Always "completed" for this event
+  accuracy: number; // Final accuracy (0.0 to 1.0)
+  progress: number; // Always 100 for completed training
+}
+```
+
+**Example Event Data:**
+
+```json
+{
+  "job_id": "a82c53d7-e99d-470d-ae1e-8575e42e1926",
+  "network_id": "0d8da319-2268-48f3-b4bf-4a4432815aef",
+  "status": "completed",
+  "accuracy": 0.9465,
+  "progress": 100
+}
+```
+
+#### `training_error`
+
+Emitted when training fails due to an error.
+
+**Event Data Structure:**
+
+```typescript
+interface TrainingError {
+  job_id: string; // Unique identifier for the training job
+  network_id: string; // Unique identifier for the neural network
+  status: "failed"; // Always "failed" for this event
+  error: string; // Error message describing what went wrong
+}
+```
+
+**Example Event Data:**
+
+```json
+{
+  "job_id": "a82c53d7-e99d-470d-ae1e-8575e42e1926",
+  "network_id": "0d8da319-2268-48f3-b4bf-4a4432815aef",
+  "status": "failed",
+  "error": "Network not found"
 }
 ```
 
@@ -87,6 +141,21 @@ export interface TrainingUpdate {
   total?: number;
 }
 
+export interface TrainingComplete {
+  job_id: string;
+  network_id: string;
+  status: "completed";
+  accuracy: number;
+  progress: number;
+}
+
+export interface TrainingError {
+  job_id: string;
+  network_id: string;
+  status: "failed";
+  error: string;
+}
+
 export interface ConnectionStatus {
   connected: boolean;
   socketId?: string;
@@ -101,6 +170,8 @@ export class TrainingWebSocketService {
     connected: false,
   });
   private trainingUpdates = new BehaviorSubject<TrainingUpdate | null>(null);
+  private trainingComplete = new BehaviorSubject<TrainingComplete | null>(null);
+  private trainingErrors = new BehaviorSubject<TrainingError | null>(null);
 
   constructor() {
     this.initializeConnection();
@@ -142,6 +213,18 @@ export class TrainingWebSocketService {
       console.log("Training update received:", data);
       this.trainingUpdates.next(data);
     });
+
+    // Training complete handler
+    this.socket.on("training_complete", (data: TrainingComplete) => {
+      console.log("Training completed:", data);
+      this.trainingComplete.next(data);
+    });
+
+    // Training error handler
+    this.socket.on("training_error", (data: TrainingError) => {
+      console.error("Training error:", data);
+      this.trainingErrors.next(data);
+    });
   }
 
   // Observable for connection status
@@ -152,6 +235,16 @@ export class TrainingWebSocketService {
   // Observable for training updates
   getTrainingUpdates(): Observable<TrainingUpdate | null> {
     return this.trainingUpdates.asObservable();
+  }
+
+  // Observable for training completion
+  getTrainingComplete(): Observable<TrainingComplete | null> {
+    return this.trainingComplete.asObservable();
+  }
+
+  // Observable for training errors
+  getTrainingErrors(): Observable<TrainingError | null> {
+    return this.trainingErrors.asObservable();
   }
 
   // Check if currently connected
@@ -388,6 +481,30 @@ export class TrainingProgressComponent implements OnInit, OnDestroy {
         .getTrainingUpdates()
         .subscribe((update) => (this.currentTraining = update))
     );
+
+    // Subscribe to training completion
+    this.subscriptions.push(
+      this.trainingWebSocket
+        .getTrainingComplete()
+        .subscribe((completion) => {
+          if (completion) {
+            console.log('Training completed successfully!', completion);
+            // Handle training completion (e.g., show success notification)
+          }
+        })
+    );
+
+    // Subscribe to training errors
+    this.subscriptions.push(
+      this.trainingWebSocket
+        .getTrainingErrors()
+        .subscribe((error) => {
+          if (error) {
+            console.error('Training failed:', error);
+            // Handle training error (e.g., show error notification)
+          }
+        })
+    );
   }
 
   ngOnDestroy(): void {
@@ -431,7 +548,7 @@ export class AppModule {}
 
 ```typescript
 // Use Angular HttpClient to start training
-startTraining(networkId: string, epochs: number = 10): Observable<any> {
+startTraining(networkId: string, epochs: number = 5): Observable<any> {
   const trainingParams = {
     epochs: epochs,
     mini_batch_size: 10,
@@ -464,8 +581,52 @@ The service includes built-in error handling for:
 
 ## Testing
 
-You can test the WebSocket connection using the provided test page at:
-`http://localhost:8000/test_socketio.html`
+You can test the WebSocket connection by:
+
+1. **Using Browser DevTools**: Monitor the Network tab (filter by WS for WebSocket connections)
+2. **Using the API status endpoint**: `GET http://localhost:8000/api/status`
+3. **Creating a simple HTML test page**: Create a test file with Socket.IO client to verify events
+
+Example minimal test HTML:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="events"></div>
+    
+    <script>
+        const socket = io('http://localhost:8000');
+        
+        socket.on('connect', () => {
+            document.getElementById('status').innerHTML = 'Connected: ' + socket.id;
+            console.log('Connected!', socket.id);
+        });
+        
+        socket.on('training_update', (data) => {
+            console.log('Training update:', data);
+            document.getElementById('events').innerHTML += '<p>Update: Epoch ' + data.epoch + '/' + data.total_epochs + '</p>';
+        });
+        
+        socket.on('training_complete', (data) => {
+            console.log('Training complete:', data);
+            document.getElementById('events').innerHTML += '<p style="color:green">Complete! Accuracy: ' + data.accuracy + '</p>';
+        });
+        
+        socket.on('training_error', (data) => {
+            console.error('Training error:', data);
+            document.getElementById('events').innerHTML += '<p style="color:red">Error: ' + data.error + '</p>';
+        });
+    </script>
+</body>
+</html>
+```
 
 This will help verify that the WebSocket server is working correctly before integrating with your Angular application.
 

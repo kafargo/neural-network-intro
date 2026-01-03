@@ -12,7 +12,6 @@ from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 import os
 import uuid
-import json
 import base64
 from io import BytesIO
 import eventlet
