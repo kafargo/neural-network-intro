@@ -20,16 +20,23 @@ The server uses:
 import os
 import sys
 import uuid
+import json
 import base64
 import logging
 from io import BytesIO
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import gevent
 import numpy as np
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO
+
+# OpenAI import (optional - only needed for about customization)
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None  # type: ignore
 
 # Use non-GUI backend for matplotlib (required for server environments)
 import matplotlib
@@ -688,6 +695,161 @@ def cleanup_old_networks_endpoint():
     except Exception as e:
         logger.exception(f"Error during manual cleanup: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+
+
+# ============================================================================
+# ABOUT ME CUSTOMIZATION
+# ============================================================================
+
+def load_work_history() -> Optional[str]:
+    """
+    Load the work history text file used as context for AI customization.
+
+    Reads from data/work_history.txt at request time so edits to the
+    file take effect without restarting the server.
+
+    Returns:
+        The raw text content of the work history file, or None if
+        the file is missing or empty.
+    """
+    work_history_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), 'data', 'work_history.txt'
+    )
+    try:
+        with open(work_history_path, 'r', encoding='utf-8') as f:
+            content = f.read().strip()
+        return content if content else None
+    except FileNotFoundError:
+        logger.warning(f"Work history file not found: {work_history_path}")
+        return None
+
+
+@app.route('/api/about/customize', methods=['POST'])
+def customize_about():
+    """
+    Generate a customized About Me and Skills section using OpenAI.
+
+    Uses the contents of data/work_history.txt as grounding context
+    combined with the user's prompt to generate personalized content.
+    Only facts present in the work history file are used to prevent
+    hallucinations.
+
+    Request body:
+        {'prompt': 'Make it sound more technical'}
+
+    Returns:
+        JSON with about_me (string with paragraphs separated by
+        newlines) and skills (list of {category, tags} objects).
+    """
+    data = request.get_json() or {}
+    prompt = data.get('prompt', '').strip()
+
+    if not prompt:
+        return jsonify({'error': 'prompt is required'}), 400
+
+    # Load work history for grounding
+    work_history = load_work_history()
+    if not work_history:
+        logger.warning("About customization requested but work history is empty")
+        return jsonify({
+            'error': 'Work history file is not configured. '
+                     'Please populate data/work_history.txt.'
+        }), 503
+
+    # Check that OpenAI package is available
+    if OpenAI is None:
+        logger.error("openai package is not installed")
+        return jsonify({
+            'error': 'OpenAI package is not installed on the server.'
+        }), 500
+
+    # Check for OpenAI API key
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key:
+        logger.error("OPENAI_API_KEY environment variable is not set")
+        return jsonify({
+            'error': 'OpenAI API key is not configured on the server.'
+        }), 500
+
+    system_prompt = (
+        "You are a professional bio writer. You will be given a detailed "
+        "work history document and a user request. Your job is to rewrite "
+        "an 'About Me' biography and a 'Skills & Technologies' section "
+        "based STRICTLY on the facts in the work history document.\n\n"
+        "CRITICAL RULES:\n"
+        "- Use ONLY facts, roles, companies, skills, and experiences "
+        "that appear in the work history document.\n"
+        "- Do NOT invent, fabricate, or assume any information not "
+        "explicitly stated in the document.\n"
+        "- If the user asks for something not supported by the work "
+        "history, politely note that in the about_me text.\n"
+        "- Write in third person or first person based on the user's "
+        "preference. Default to first person.\n\n"
+        "Return a JSON object with exactly two keys:\n"
+        "1. \"about_me\": A string containing 2-4 paragraphs separated "
+        "by \\n\\n (double newline). Plain text only, no markdown or HTML.\n"
+        "2. \"skills\": An array of objects, each with:\n"
+        "   - \"category\": A short category name (e.g., \"Frontend\", "
+        "\"Backend\", \"Leadership\")\n"
+        "   - \"tags\": An array of skill/technology strings belonging "
+        "to that category\n\n"
+        "WORK HISTORY DOCUMENT:\n"
+        "---\n"
+        f"{work_history}\n"
+        "---"
+    )
+
+    try:
+        client = OpenAI(api_key=api_key)
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=2048,
+            temperature=0.7
+        )
+
+        result_text = response.choices[0].message.content
+        result = json.loads(result_text)
+
+        # Validate response structure
+        if 'about_me' not in result or 'skills' not in result:
+            logger.error(f"Invalid AI response structure: {result.keys()}")
+            return jsonify({
+                'error': 'AI returned an unexpected response format.'
+            }), 500
+
+        if not isinstance(result['about_me'], str):
+            return jsonify({
+                'error': 'AI returned invalid about_me format.'
+            }), 500
+
+        if not isinstance(result['skills'], list):
+            return jsonify({
+                'error': 'AI returned invalid skills format.'
+            }), 500
+
+        logger.info("About Me customization generated successfully")
+
+        return jsonify({
+            'about_me': result['about_me'],
+            'skills': result['skills']
+        }), 200
+
+    except json.JSONDecodeError as e:
+        logger.exception(f"Failed to parse AI response as JSON: {e}")
+        return jsonify({
+            'error': 'AI returned an invalid response. Please try again.'
+        }), 500
+    except Exception as e:
+        logger.exception(f"Error during about customization: {e}")
+        return jsonify({
+            'error': f'Failed to generate customized content: {str(e)}'
+        }), 500
 
 
 # ============================================================================

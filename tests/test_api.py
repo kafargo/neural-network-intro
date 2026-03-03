@@ -442,3 +442,173 @@ class TestCleanupEndpoint:
         assert cleanup_data['days'] == 2
 
 
+@pytest.mark.api
+class TestAboutCustomizeEndpoint:
+    """Tests for the AI-powered about customization endpoint."""
+
+    def test_missing_prompt_returns_400(self, flask_client):
+        """Test that a missing prompt returns 400."""
+        response = flask_client.post('/api/about/customize', json={})
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert 'error' in data
+        assert 'prompt' in data['error'].lower()
+
+    def test_empty_prompt_returns_400(self, flask_client):
+        """Test that an empty string prompt returns 400."""
+        response = flask_client.post(
+            '/api/about/customize',
+            json={'prompt': '   '}
+        )
+        assert response.status_code == 400
+        data = json.loads(response.data)
+        assert 'error' in data
+
+    def test_missing_work_history_returns_503(self, flask_client):
+        """Test that a missing work history file returns 503."""
+        from unittest.mock import patch
+        with patch(
+            'api_server.load_work_history', return_value=None
+        ), patch.dict(
+            'os.environ', {'OPENAI_API_KEY': 'test-key'}
+        ):
+            response = flask_client.post(
+                '/api/about/customize',
+                json={'prompt': 'Make it technical'}
+            )
+            assert response.status_code == 503
+            data = json.loads(response.data)
+            assert 'error' in data
+            assert 'work history' in data['error'].lower()
+
+    def test_missing_api_key_returns_500(self, flask_client):
+        """Test that a missing OpenAI API key returns 500."""
+        from unittest.mock import patch
+        with patch(
+            'api_server.load_work_history',
+            return_value='Some work history content'
+        ):
+            with patch.dict('os.environ', {}, clear=True):
+                # Remove OPENAI_API_KEY if present
+                import os
+                env_copy = os.environ.copy()
+                env_copy.pop('OPENAI_API_KEY', None)
+                with patch.dict('os.environ', env_copy, clear=True):
+                    response = flask_client.post(
+                        '/api/about/customize',
+                        json={'prompt': 'Make it technical'}
+                    )
+                    assert response.status_code == 500
+                    data = json.loads(response.data)
+                    assert 'error' in data
+
+    def test_successful_customization(self, flask_client):
+        """Test successful about customization with mocked OpenAI."""
+        from unittest.mock import patch, MagicMock
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = json.dumps({
+            'about_me': 'First paragraph.\n\nSecond paragraph.',
+            'skills': [
+                {'category': 'Backend', 'tags': ['Python', 'Flask']},
+                {'category': 'Frontend', 'tags': ['Angular']}
+            ]
+        })
+
+        mock_client_instance = MagicMock()
+        mock_client_instance.chat.completions.create.return_value = (
+            mock_response
+        )
+        mock_openai_class = MagicMock(return_value=mock_client_instance)
+
+        with patch(
+            'api_server.load_work_history',
+            return_value='Detailed work history content here'
+        ), patch.dict(
+            'os.environ', {'OPENAI_API_KEY': 'test-key'}
+        ), patch(
+            'api_server.OpenAI', mock_openai_class
+        ):
+            response = flask_client.post(
+                '/api/about/customize',
+                json={'prompt': 'Make it sound technical'}
+            )
+            assert response.status_code == 200
+            data = json.loads(response.data)
+            assert 'about_me' in data
+            assert 'skills' in data
+            assert isinstance(data['about_me'], str)
+            assert isinstance(data['skills'], list)
+            assert len(data['skills']) == 2
+            assert data['skills'][0]['category'] == 'Backend'
+
+    def test_openai_failure_returns_500(self, flask_client):
+        """Test that an OpenAI API failure returns 500."""
+        from unittest.mock import patch, MagicMock
+
+        mock_client_instance = MagicMock()
+        mock_client_instance.chat.completions.create.side_effect = (
+            Exception("OpenAI API error")
+        )
+        mock_openai_class = MagicMock(return_value=mock_client_instance)
+
+        with patch(
+            'api_server.load_work_history',
+            return_value='Some work history'
+        ), patch.dict(
+            'os.environ', {'OPENAI_API_KEY': 'test-key'}
+        ), patch(
+            'api_server.OpenAI', mock_openai_class
+        ):
+            response = flask_client.post(
+                '/api/about/customize',
+                json={'prompt': 'Make it fun'}
+            )
+            assert response.status_code == 500
+            data = json.loads(response.data)
+            assert 'error' in data
+
+    def test_invalid_ai_response_returns_500(self, flask_client):
+        """Test that an invalid JSON response from AI returns 500."""
+        from unittest.mock import patch, MagicMock
+
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        # Missing required 'skills' key
+        mock_response.choices[0].message.content = json.dumps({
+            'about_me': 'Some text'
+        })
+
+        mock_client_instance = MagicMock()
+        mock_client_instance.chat.completions.create.return_value = (
+            mock_response
+        )
+        mock_openai_class = MagicMock(return_value=mock_client_instance)
+
+        with patch(
+            'api_server.load_work_history',
+            return_value='Some work history'
+        ), patch.dict(
+            'os.environ', {'OPENAI_API_KEY': 'test-key'}
+        ), patch(
+            'api_server.OpenAI', mock_openai_class
+        ):
+            response = flask_client.post(
+                '/api/about/customize',
+                json={'prompt': 'Rewrite'}
+            )
+            assert response.status_code == 500
+            data = json.loads(response.data)
+            assert 'error' in data
+
+    def test_no_json_body_returns_400(self, flask_client):
+        """Test that a request without JSON body returns 400."""
+        response = flask_client.post(
+            '/api/about/customize',
+            content_type='application/json',
+            data='{}'
+        )
+        assert response.status_code == 400
+
+
