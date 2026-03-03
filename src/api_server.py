@@ -808,12 +808,45 @@ def customize_about():
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            response_format={"type": "json_object"},
             max_completion_tokens=2048
         )
 
         result_text = response.choices[0].message.content
-        result = json.loads(result_text)
+
+        # Log raw response for debugging
+        logger.debug(f"Raw AI response: {result_text[:500] if result_text else 'None'}")
+
+        # Handle empty or None response
+        if not result_text:
+            logger.error("AI returned empty response")
+            return jsonify({
+                'error': 'AI returned an empty response. Please try again.'
+            }), 500
+
+        # Try to extract JSON from the response
+        # Some models wrap JSON in markdown code blocks
+        import re
+        json_text = result_text.strip()
+
+        # Try to extract JSON from markdown code block (```json ... ``` or ``` ... ```)
+        code_block_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', json_text)
+        if code_block_match:
+            json_text = code_block_match.group(1).strip()
+
+        # Try to find JSON object in the text (starts with { and ends with })
+        if not json_text.startswith('{'):
+            json_match = re.search(r'\{[\s\S]*\}', json_text)
+            if json_match:
+                json_text = json_match.group(0)
+
+        try:
+            result = json.loads(json_text)
+        except json.JSONDecodeError:
+            # Log the problematic response for debugging
+            logger.error(f"Could not parse JSON from response: {result_text[:1000]}")
+            return jsonify({
+                'error': 'AI returned a non-JSON response. Please try again.'
+            }), 500
 
         # Validate response structure
         if 'about_me' not in result or 'skills' not in result:
