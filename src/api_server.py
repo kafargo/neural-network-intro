@@ -810,7 +810,7 @@ def customize_about():
             ],
             response_format={"type": "json_object"},
             max_completion_tokens=2048,
-            temperature=0.7
+            reasoning={"effort": "low"}
         )
 
         result_text = response.choices[0].message.content
