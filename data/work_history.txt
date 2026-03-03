@@ -4,66 +4,71 @@ Colorado Springs, CO 80908
 303-550-0363
 Kevin.A.Fargo@gmail.com
 
-Summary
-Greenwood Village, CO
-Test Driven Development
-MEAN Web Application Stack
-Relational and Object Oriented Database Technologies
-Senior Agile Practitioner (Optum) (February 2022 – Present)
-Guided team members on the adoption of pair programming using VS Code tools like Live Share.
-Promoted test driven development practices by first writing unit test then writing associated functions/classes to test against
-Pair programmed with SDETs to build out a regression test suite using JavaScript Playwright test automation framework. Assisted with the development of creating shared components for the test automation suite to be made available to the broader organization.
-Performed DBA duties for the data center migration system database (SQL based)
-Integrated SQL reports into custom HTML SharePoint pages to allow for asset analysis by project team members
+Summary:
+About Me
+With nearly 15 years in IT, I've journeyed from data center migrations to the dynamic world of software engineering and product development. My career took a pivotal turn at Charles Schwab, where I discovered the power of software to drive real business outcomes—and I've been hooked ever since.
 
-Experience
-Senior Agile Practitioner (naviHealth / Optum) (February 2022 – Present)
-Partnered with various stakeholders to create and regularly update the product vision, development roadmaps, and implementation plans for different phases of the project
-Guided multi-organization level coordination meetings ensuring effective communication and alignment between multiple program stakeholders
-Utilized KPIs and agile ceremonies to guide the decomposition of the product vision into executable pieces of work
+I've worn many hats: business analyst, scrum master, software development manager, and now, software engineer. This unique journey gives me a perspective that few engineers have—I understand not just how to write code, but how to lead teams, translate business needs into technical solutions, and deliver value across the entire software development lifecycle.
+
+Whether I'm sketching out user stories, leading agile teams, or diving into code, I thrive on solving problems and delivering impact. I'm always learning, always building— and this neural network project is just one example of my passion for continuous growth.
+
+Work History and Experience:
+Senior Agile Practitioner / Software Engineer (naviHealth / Optum) (February 2022 – Present)
+- Partnered with various stakeholders to create and regularly update the product vision, development roadmaps, and implementation plans for different phases of the project
+- Guided multi-organization level coordination meetings ensuring effective communication and alignment between multiple program stakeholders
+- Utilized KPIs and agile ceremonies to guide the decomposition of the product vision into executable pieces of work
+- Built .NET web application backend REST API controllers for a healthcare system
+- Deployed, debuged, supported application systems in production and during releases
+- Converted application infrastructure from physical servers to Azure web applications (AKS and App Services)
+- Built Camunda workflow automation system interfacing with .NET backend systems
+- Built playwright regression test suite for healthcare web application
+- Modified Angular frontend adding new functionality interfacing with backend systems
+- Co-hosted requirements elicitation sessions along with product owners and clinicians to understand and document business problems
+- Facilitated multi team product backlog refinement meetings gaining alignment on work by developing a shared understanding of backlog items
+- Coordinated release schedules for multi-system releases and go-live events
+
+
 Software Development Manager IT (FedEx) (September 2019 – February 2022)
-Managed 4 teams of software engineers, system analyst, and project managers building two critical customs clearance systems
-Performed SWAT analysis and other risk mitigation/management techniques to manage program risk at the entgerprise level across development teams
-Promoted a kaizen culture and created an environment where team members embraced continuous improvement practices
-Performed ongoing system monitoring for performance and security concerns of live production systems
-Scrum Master (FedEx) (January 2017 – September 2019)
-Simultaneously led two agile teams (Scrum and Kanban) as part of a broader agile release train
-Served as lead product owner liaison for the department and regularly held user story writing and user story mapping workshops with business partners
-Coached teams on usage of incremental product delivery in both the production and testing enviornments
-Founded pair programming labs on site and used labs to mentor developers on pair programing best practices
-Business System Analyst / Scrum Master (Charles Schwab) (September 2015 – January 2017)
-Assisted product owners in developing a strong backlog with regular and incremental decomposing of features into stories just in time for development teams to execute
-Led and coordinated all major scrum ceremonies including refinement (grooming) sessions, daily standups, sprint planning, sprint review (demo), and retrospectives
-Monitored sprints using burndown charts and enforcement of WIP limits during sprint execution
-Consultant (EMC) (May 2012 – September 2015)
-Performed a variety of project management roles using both traditional waterfall and lean six sigma methodologies
-Collected and analyzed data sets to map dependencies between infrastructure and software assets
-Worked closely with sales organization to develop statements of work and foster relationships with current and prospective clients
+- Managed 4 teams of software engineers, system analyst, and project managers building two critical customs clearance systems
+- Performed SWAT analysis and other risk mitigation/management techniques to manage program risk at the enterprise level across development teams
+- Promoted a kaizen culture and created an environment where team members embraced continuous improvement practices
+- Performed ongoing system monitoring for performance and security concerns of live production systems
 
-Education
-BS in Information Technology
+Scrum Master (FedEx) (January 2017 – September 2019)
+- Simultaneously led two agile teams (Scrum and Kanban) as part of a broader agile release train
+- Served as lead product owner liaison for the department and regularly held user story writing and user story mapping workshops with business partners
+- Coached teams on usage of incremental product delivery in both the production and testing environments
+- Founded pair programming labs on site and used labs to mentor developers on pair programming best practices
+- Partnered with various stakeholders to create and regularly update the product vision, development roadmaps, and implementation plans for different phases of the project
+- Guided multi-organization level coordination meetings ensuring effective communication and alignment between multiple program stakeholders
+- Utilized KPIs and agile ceremonies to guide the decomposition of the product vision into executable pieces of work
+
+Business System Analyst / Scrum Master (Charles Schwab) (September 2015 – January 2017)
+- Assisted product owners in developing a strong backlog with regular and incremental decomposing of features into stories just in time for development teams to execute
+- Led and coordinated all major scrum ceremonies including refinement (grooming) sessions, daily standups, sprint planning, sprint review (demo), and retrospectives
+- Monitored sprints using burndown charts and enforcement of WIP limits during sprint execution
+
+Project Manager / DBA (EMC) (May 2012 – September 2015)
+- Performed a variety of project management roles using both traditional waterfall and lean six sigma methodologies
+- Collected and analyzed data sets to map dependencies between infrastructure and software assets
+- Worked closely with sales organization to develop statements of work and foster relationships with current and prospective clients
+- Performed DBA duties for the data center migration system database (SQL based)
+- Collected and analyzed data sets to map dependencies between infrastructure and software assets
+- Integrated SQL reports into custom HTML SharePoint pages to allow for asset analysis by project team members
+
+
+Education:
+Colorado State University: BS in Information Technology
 GPA: 3.96
-Regis University July 2013 – In Progress
-MS in Software Engineering (in progress)
+Regis University: MS in Software Engineering
 GPA: 4.00
-SAFe/Scrum/Kanban/XP Frameworks
+
+Soft Skills:
+SAFe/Scrum/Kanban/XP/Traditional Frameworks
+Organizational Design
 Coaching of Teams & Individuals
 Improving Team Cohesion
 Agile Software Development
-Led the organizational transformation from single team scrum to large scale scrum
-Facilitated multi team product backlog refinement meetings gaining alignment on work by developing a shared understanding of backlog items
-Mentored junior scrum masters in the organization
-Coached four teams of software developers and scrum masters on embracing an agile mindset and using agile tools and frameworks to incrementally deliver software to production
-Challenged team members to cross train enabling traditionally single stack developers to become more t-shaped and even full stack team members
-Promoted a kaizen culture and created an environment where team members could fully embrace and practice agile values and principals
-Demonstrated the power of agile by improving both the quality and number of features delivered in a program increment
-Developed and taught Kanban training working with the FedEx education services department to supplement existing collateral
-Coached teams on usage of XP development practices to build high quality applications in small increments
-Scrum Master (Charles Schwab) (September 2015 – January 2017)
-
-Skills:
-SAFe/Scrum/Kanban/XP/Traditional Frameworks
-Organizational Design
 Project and Program Management
 Software Development Lifecycle
 Motivational Servant Leadership
@@ -74,7 +79,7 @@ Certified Agile Leadership for Teams (CAL-T)
 Certified LeSS Practitioner (CLP)
 
 Technology:
-.NET, C#, JavaScript, TypeScript, Playwright, Python, K8s, Docker, Jira, Confluence, Rally, Camunda, REST, SQL, TSQL, MS SQL, Postgres, Java
+.NET, C#, JavaScript, TypeScript, Playwright, Python, K8s, Docker, Jira, Confluence, Rally, Camunda, REST, SQL, TSQL, MS SQL, Postgres, Java. MongoDB
 
 Values:
 Honesty, Humility, Respect, Teamwork
