@@ -809,8 +809,7 @@ def customize_about():
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
-            max_completion_tokens=2048,
-            reasoning={"effort": "low"}
+            max_completion_tokens=2048
         )
 
         result_text = response.choices[0].message.content
