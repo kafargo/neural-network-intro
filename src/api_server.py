@@ -727,19 +727,17 @@ def load_work_history() -> Optional[str]:
 @app.route('/api/about/customize', methods=['POST'])
 def customize_about():
     """
-    Generate a customized About Me and Skills section using OpenAI.
+    Generate a customized About Me section using OpenAI.
 
-    Uses the contents of data/work_history.txt as grounding context
-    combined with the user's prompt to generate personalized content.
-    Only facts present in the work history file are used to prevent
-    hallucinations.
+    Uses the contents of data/work_history.txt (which should include
+    an existing About Me and work history details) as grounding context.
+    Only facts present in the work history file are used.
 
     Request body:
         {'prompt': 'Make it sound more technical'}
 
     Returns:
-        JSON with about_me (string with paragraphs separated by
-        newlines) and skills (list of {category, tags} objects).
+        JSON with about_me (plain text biography, 2-4 paragraphs).
     """
     data = request.get_json() or {}
     prompt = data.get('prompt', '').strip()
@@ -772,27 +770,18 @@ def customize_about():
         }), 500
 
     system_prompt = (
-        "You are a professional bio writer. You will be given a detailed "
-        "work history document and a user request. Your job is to rewrite "
-        "an 'About Me' biography and a 'Skills & Technologies' section "
-        "based STRICTLY on the facts in the work history document.\n\n"
-        "CRITICAL RULES:\n"
-        "- Use ONLY facts, roles, companies, skills, and experiences "
-        "that appear in the work history document.\n"
-        "- Do NOT invent, fabricate, or assume any information not "
-        "explicitly stated in the document.\n"
-        "- If the user asks for something not supported by the work "
-        "history, politely note that in the about_me text.\n"
-        "- Write in third person or first person based on the user's "
-        "preference. Default to first person.\n\n"
-        "Return a JSON object with exactly two keys:\n"
-        "1. \"about_me\": A string containing 2-4 paragraphs separated "
-        "by \\n\\n (double newline). Plain text only, no markdown or HTML.\n"
-        "2. \"skills\": An array of objects, each with:\n"
-        "   - \"category\": A short category name (e.g., \"Frontend\", "
-        "\"Backend\", \"Leadership\")\n"
-        "   - \"tags\": An array of skill/technology strings belonging "
-        "to that category\n\n"
+        "You are a professional bio writer. You will be given a work history "
+        "document that includes an existing 'About Me' section and other career "
+        "details. Your job is to rewrite the 'About Me' biography based on the "
+        "user's request.\n\n"
+        "RULES:\n"
+        "- Use ONLY facts, roles, companies, skills, and experiences from the "
+        "work history document.\n"
+        "- Do NOT invent or assume any information not in the document.\n"
+        "- Write in first person unless the user requests otherwise.\n"
+        "- Return ONLY the plain text biography (2-4 paragraphs).\n"
+        "- Do NOT include any markdown, HTML, or formatting.\n"
+        "- Do NOT include headers, labels, or explanations — just the bio text.\n\n"
         "WORK HISTORY DOCUMENT:\n"
         "---\n"
         f"{work_history}\n"
@@ -813,9 +802,6 @@ def customize_about():
 
         result_text = response.choices[0].message.content
 
-        # Log raw response for debugging
-        logger.debug(f"Raw AI response: {result_text[:500] if result_text else 'None'}")
-
         # Handle empty or None response
         if not result_text:
             logger.error("AI returned empty response")
@@ -823,60 +809,15 @@ def customize_about():
                 'error': 'AI returned an empty response. Please try again.'
             }), 500
 
-        # Try to extract JSON from the response
-        # Some models wrap JSON in markdown code blocks
-        import re
-        json_text = result_text.strip()
-
-        # Try to extract JSON from markdown code block (```json ... ``` or ``` ... ```)
-        code_block_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', json_text)
-        if code_block_match:
-            json_text = code_block_match.group(1).strip()
-
-        # Try to find JSON object in the text (starts with { and ends with })
-        if not json_text.startswith('{'):
-            json_match = re.search(r'\{[\s\S]*\}', json_text)
-            if json_match:
-                json_text = json_match.group(0)
-
-        try:
-            result = json.loads(json_text)
-        except json.JSONDecodeError:
-            # Log the problematic response for debugging
-            logger.error(f"Could not parse JSON from response: {result_text[:1000]}")
-            return jsonify({
-                'error': 'AI returned a non-JSON response. Please try again.'
-            }), 500
-
-        # Validate response structure
-        if 'about_me' not in result or 'skills' not in result:
-            logger.error(f"Invalid AI response structure: {result.keys()}")
-            return jsonify({
-                'error': 'AI returned an unexpected response format.'
-            }), 500
-
-        if not isinstance(result['about_me'], str):
-            return jsonify({
-                'error': 'AI returned invalid about_me format.'
-            }), 500
-
-        if not isinstance(result['skills'], list):
-            return jsonify({
-                'error': 'AI returned invalid skills format.'
-            }), 500
+        # Clean up the response (strip whitespace)
+        about_me = result_text.strip()
 
         logger.info("About Me customization generated successfully")
 
         return jsonify({
-            'about_me': result['about_me'],
-            'skills': result['skills']
+            'about_me': about_me
         }), 200
 
-    except json.JSONDecodeError as e:
-        logger.exception(f"Failed to parse AI response as JSON: {e}")
-        return jsonify({
-            'error': 'AI returned an invalid response. Please try again.'
-        }), 500
     except Exception as e:
         logger.exception(f"Error during about customization: {e}")
         return jsonify({
