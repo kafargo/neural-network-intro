@@ -770,22 +770,12 @@ def customize_about():
         }), 500
 
     system_prompt = (
-        "You are a professional bio writer. You will be given a work history "
-        "document that includes an existing 'About Me' section and other career "
-        "details. Your job is to rewrite the 'About Me' biography based on the "
-        "user's request.\n\n"
-        "RULES:\n"
-        "- Use ONLY facts, roles, companies, skills, and experiences from the "
-        "work history document.\n"
-        "- Do NOT invent or assume any information not in the document.\n"
-        "- Write in first person unless the user requests otherwise.\n"
-        "- Return ONLY the plain text biography (2-4 paragraphs).\n"
-        "- Do NOT include any markdown, HTML, or formatting.\n"
-        "- Do NOT include headers, labels, or explanations — just the bio text.\n\n"
-        "WORK HISTORY DOCUMENT:\n"
-        "---\n"
-        f"{work_history}\n"
-        "---"
+        "You are a professional bio writer. Rewrite the 'About Me' biography "
+        "based on the user's request using ONLY facts from the work history below.\n"
+        "Rules: Use only facts from the document. Write in first person. "
+        "Return ONLY plain text (2-4 paragraphs). No markdown or headers.\n\n"
+        "WORK HISTORY:\n"
+        f"{work_history}"
     )
 
     try:
@@ -797,7 +787,7 @@ def customize_about():
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
             ],
-            max_completion_tokens=2048
+            max_completion_tokens=8192
         )
 
         # Log the full response structure for debugging
