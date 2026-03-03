@@ -809,7 +809,7 @@ def customize_about():
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
-            max_tokens=2048,
+            max_completion_tokens=2048,
             temperature=0.7
         )
 
