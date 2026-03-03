@@ -790,38 +790,24 @@ def customize_about():
             max_completion_tokens=8192
         )
 
-        # Log the full response structure for debugging
-        logger.info(f"API Response - finish_reason: {response.choices[0].finish_reason}")
-        logger.info(f"API Response - message: {response.choices[0].message}")
-
         message = response.choices[0].message
+        result_text = message.content if message.content else None
 
-        # Try to get content from various possible fields
-        result_text = None
-
-        # Standard content field
-        if hasattr(message, 'content') and message.content:
-            result_text = message.content
-            logger.info(f"Got content from message.content: {result_text[:100]}...")
-
-        # Some models use refusal field when they can't/won't respond
+        # Handle model refusal
         if not result_text and hasattr(message, 'refusal') and message.refusal:
             logger.warning(f"Model refused to respond: {message.refusal}")
             return jsonify({
                 'error': f'AI declined to generate content: {message.refusal}'
             }), 400
 
-        # Handle empty or None response
+        # Handle empty response
         if not result_text:
-            logger.error(f"AI returned empty response. Full message object: {message}")
-            logger.error(f"Finish reason: {response.choices[0].finish_reason}")
+            logger.error(f"AI returned empty response (finish_reason: {response.choices[0].finish_reason})")
             return jsonify({
                 'error': 'AI returned an empty response. Please try again.'
             }), 500
 
-        # Clean up the response (strip whitespace)
         about_me = result_text.strip()
-
         logger.info("About Me customization generated successfully")
 
         return jsonify({
