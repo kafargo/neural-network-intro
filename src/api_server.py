@@ -803,7 +803,7 @@ def customize_about():
         client = OpenAI(api_key=api_key)
 
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="GPT-5 nano",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
