@@ -13,7 +13,7 @@ I've worn many hats: business analyst, scrum master, software development manage
 Whether I'm sketching out user stories, leading agile teams, or diving into code, I thrive on solving problems and delivering impact. I'm always learning, always building— and this neural network project is just one example of my passion for continuous growth.
 
 Work History and Experience:
-Senior Agile Practitioner / Software Engineer (naviHealth / Optum) (February 2022 – Present)
+Senior Agile Practitioner / Software Engineer (Optum) (February 2022 – Present)
 - Partnered with various stakeholders to create and regularly update the product vision, development roadmaps, and implementation plans for different phases of the project
 - Guided multi-organization level coordination meetings ensuring effective communication and alignment between multiple program stakeholders
 - Utilized KPIs and agile ceremonies to guide the decomposition of the product vision into executable pieces of work
